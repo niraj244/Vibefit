@@ -1,0 +1,4 @@
+
+.bannerBoxV2{height: 250px;}
+.bannerBoxV2 img{width: 100%; height: 100%; object-fit: contain; display: block;}
+.bannerBoxV2 a{text-decoration: underline !important;}
