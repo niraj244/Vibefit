@@ -9,7 +9,7 @@ import { MyContext } from "../../App";
 import CircularProgress from '@mui/material/CircularProgress';
 import { postData } from "../../utils/api";
 
-import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from "firebase/auth";
 import { firebaseApp } from "../../firebase";
 const auth = getAuth(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
@@ -31,12 +31,45 @@ const Login = () => {
   useEffect(()=>{
     window.scrollTo(0,0)
     const token = localStorage.getItem('accessToken');
-
     if (token !== undefined && token !== null && token !== "") {
       history("/")
     }
-
   },[]);
+
+  // Handle Google redirect result when page loads back after redirect
+  useEffect(() => {
+    setIsLoading(true);
+    getRedirectResult(auth).then(async (result) => {
+      setIsLoading(false);
+      if (!result) return;
+      const user = result.user;
+      const fields = {
+        name: user.providerData[0].displayName,
+        email: user.providerData[0].email,
+        password: null,
+        avatar: user.providerData[0].photoURL,
+        mobile: user.providerData[0].phoneNumber,
+        role: "USER"
+      };
+      postData("/api/user/authWithGoogle", fields).then(async (res) => {
+        if (res?.error !== true) {
+          context.alertBox("success", res?.message);
+          localStorage.setItem("userEmail", fields.email);
+          localStorage.setItem("accessToken", res?.data?.accesstoken);
+          localStorage.setItem("refreshToken", res?.data?.refreshToken);
+          await context.mergeGuestCart();
+          context.setIsLogin(true);
+          history(redirectTo);
+        } else {
+          context.alertBox("error", res?.message);
+        }
+      });
+    }).catch((error) => {
+      setIsLoading(false);
+      console.error("Google redirect error:", error.code, error.message);
+      context.alertBox("error", error.message || "Google sign-in failed. Please try again.");
+    });
+  }, []);
 
   const forgotPassword =()=>{
   
@@ -126,52 +159,7 @@ const Login = () => {
 
 
       const authWithGoogle = () => {
-    
-        signInWithPopup(auth, googleProvider)
-          .then((result) => {
-            // google token stuff
-            const credential = GoogleAuthProvider.credentialFromResult(result);
-            const token = credential.accessToken;
-            // user data
-            const user = result.user;
-    
-            const fields = {
-              name: user.providerData[0].displayName,
-              email: user.providerData[0].email,
-              password: null,
-              avatar: user.providerData[0].photoURL,
-              mobile: user.providerData[0].phoneNumber,
-              role: "USER"
-            };
-    
-    
-            postData("/api/user/authWithGoogle", fields).then(async (res) => {
-              if (res?.error !== true) {
-                setIsLoading(false);
-                context.alertBox("success", res?.message);
-                localStorage.setItem("userEmail", fields.email);
-                localStorage.setItem("accessToken", res?.data?.accesstoken);
-                localStorage.setItem("refreshToken", res?.data?.refreshToken);
-
-                await context.mergeGuestCart();
-                context.setIsLogin(true);
-
-                history(redirectTo);
-              } else {
-                context.alertBox("error", res?.message);
-                setIsLoading(false);
-              }
-            })
-    
-            console.log(user)
-            // user info from google
-          }).catch((error) => {
-            console.error("Google sign-in error:", error.code, error.message);
-            context.alertBox("error", error.message || "Google sign-in failed. Please try again.");
-            setIsLoading(false);
-          });
-    
-    
+        signInWithRedirect(auth, googleProvider);
       }
     
 
