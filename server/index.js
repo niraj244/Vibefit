@@ -59,7 +59,7 @@ app.get("/", (request, response) => {
     })
 })
 
-// Email diagnostic endpoint — hit this URL to verify email works on Render
+// Email diagnostic endpoint — open this URL to verify email config on Render
 app.get("/api/email-test", async (request, response) => {
     const { sendEmail } = await import('./config/emailService.js');
     const result = await sendEmail(
@@ -73,8 +73,8 @@ app.get("/api/email-test", async (request, response) => {
         messageId: result.messageId,
         error: result.error,
         emailUser: process.env.EMAIL,
-        emailPassSet: !!process.env.EMAIL_PASS,
-        emailPassLength: process.env.EMAIL_PASS?.length
+        brevoApiKeySet: !!process.env.BREVO_API_KEY,
+        brevoApiKeyLength: process.env.BREVO_API_KEY?.length
     });
 })
 

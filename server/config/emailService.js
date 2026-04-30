@@ -1,46 +1,52 @@
-import nodemailer from 'nodemailer';
-
-function createTransporter() {
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
-    auth: {
-      user: process.env.EMAIL,
-      pass: process.env.EMAIL_PASS,
-    },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-  });
-}
+// Uses Brevo (formerly Sendinblue) HTTP API — works from any host (HTTPS, not SMTP)
+// Render blocks outbound SMTP; this API call goes over port 443 which is never blocked.
 
 async function sendEmail(to, subject, text, html) {
   try {
-    const user = process.env.EMAIL;
-    const pass = process.env.EMAIL_PASS;
+    const apiKey = process.env.BREVO_API_KEY;
+    const senderEmail = process.env.EMAIL;
 
-    console.log('[Email] Attempting send to:', to);
-    console.log('[Email] Auth user:', user, '| Pass set:', !!pass, '| Pass length:', pass?.length);
+    console.log('[Email] Sending to:', to, '| From:', senderEmail, '| Brevo key set:', !!apiKey);
 
-    if (!user || !pass) {
-      console.error('[Email] Missing EMAIL or EMAIL_PASS env vars!');
-      return { success: false, error: 'Missing email credentials' };
+    if (!apiKey) {
+      console.error('[Email] BREVO_API_KEY is not set!');
+      return { success: false, error: 'BREVO_API_KEY env var missing' };
+    }
+    if (!senderEmail) {
+      console.error('[Email] EMAIL env var is not set!');
+      return { success: false, error: 'EMAIL env var missing' };
     }
 
-    const transporter = createTransporter();
-    const info = await transporter.sendMail({
-      from: user,
-      to,
-      subject,
-      text,
-      html,
+    const toList = Array.isArray(to)
+      ? to.map(e => ({ email: e }))
+      : [{ email: to }];
+
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: { name: 'VibeFit', email: senderEmail },
+        to: toList,
+        subject,
+        htmlContent: html || text,
+      }),
     });
 
-    console.log('[Email] Sent successfully! MessageId:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    const data = await response.json();
+
+    if (response.ok) {
+      console.log('[Email] Sent successfully! MessageId:', data.messageId);
+      return { success: true, messageId: data.messageId };
+    } else {
+      console.error('[Email] Brevo API error:', JSON.stringify(data));
+      return { success: false, error: JSON.stringify(data) };
+    }
   } catch (error) {
-    console.error('[Email] Send failed:', error.message);
+    console.error('[Email] Unexpected error:', error.message);
     return { success: false, error: error.message };
   }
 }
