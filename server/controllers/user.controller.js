@@ -55,7 +55,7 @@ export async function registerUserController(request, response) {
             await user.save();
 
             // Send verification email
-            await sendEmailFun({
+            sendEmailFun({
                 sendTo: email,
                 subject: "Verify email from Ecommerce App",
                 text: "",
@@ -94,7 +94,7 @@ export async function registerUserController(request, response) {
         await user.save();
 
         // Send verification email
-        await sendEmailFun({
+        sendEmailFun({
             sendTo: email,
             subject: "Verify email from Ecommerce App",
             text: "",
@@ -198,7 +198,7 @@ export async function resendOtpController(request, response) {
         await user.save();
 
         // Send verification email
-        await sendEmailFun({
+        sendEmailFun({
             sendTo: email,
             subject: "Verify email from Ecommerce App",
             text: "",
@@ -349,7 +349,7 @@ export async function loginUserController(request, response) {
             await user.save();
 
             // Send verification email
-            await sendEmailFun({
+            sendEmailFun({
                 sendTo: email,
                 subject: "Verify email from Ecommerce App",
                 text: "",
@@ -599,7 +599,7 @@ export async function forgotPasswordController(request, response) {
 
             await user.save();
 
-            await sendEmailFun({
+            sendEmailFun({
                 sendTo: email,
                 subject: "Verify OTP from Ecommerce App",
                 text: "",

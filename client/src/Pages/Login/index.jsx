@@ -166,12 +166,9 @@ const Login = () => {
             console.log(user)
             // user info from google
           }).catch((error) => {
-            // error handling
-            const errorCode = error.code;
-            const errorMessage = error.message;
-            const email = error.customData.email;
-            const credential = GoogleAuthProvider.credentialFromError(error);
-            // ...
+            console.error("Google sign-in error:", error.code, error.message);
+            context.alertBox("error", error.message || "Google sign-in failed. Please try again.");
+            setIsLoading(false);
           });
     
     
