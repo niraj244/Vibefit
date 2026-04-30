@@ -1,15 +1,17 @@
-import http from 'http';
 import nodemailer from 'nodemailer';
 
 // Configure the SMTP transporter
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com', // Gmail
-  port: 465, // or 465 for secure
-  secure: true, // true for port 465, false for other ports
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.EMAIL, // your SMTP username
-    pass: process.env.EMAIL_PASS,    // your SMTP password
+    user: process.env.EMAIL,
+    pass: process.env.EMAIL_PASS,
   },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 15000,
 });
 
 // Function to send email
