@@ -10,7 +10,7 @@ import { postData } from "../../utils/api";
 import CircularProgress from '@mui/material/CircularProgress';
 import { useNavigate } from "react-router-dom";
 
-import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, signInWithPopup, signInWithRedirect, getRedirectResult, GoogleAuthProvider } from "firebase/auth";
 import { firebaseApp } from "../../firebase";
 const auth = getAuth(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
@@ -32,10 +32,17 @@ const Register = () => {
     window.scrollTo(0,0)
   },[]);
 
-  // Handle Google redirect result when page loads back after redirect
+  // Handle Google redirect fallback result (only when popup was blocked)
   useEffect(() => {
+    const pending = localStorage.getItem('googleAuthPending');
+    if (!pending) return;
+
     getRedirectResult(auth).then(async (result) => {
-      if (!result) return;
+      localStorage.removeItem('googleAuthPending');
+      if (!result) {
+        context.alertBox("error", "Google sign-in could not be completed. Please try again.");
+        return;
+      }
       const user = result.user;
       const fields = {
         name: user.providerData[0].displayName,
@@ -58,6 +65,7 @@ const Register = () => {
         }
       });
     }).catch((error) => {
+      localStorage.removeItem('googleAuthPending');
       console.error("Google redirect error:", error.code, error.message);
       context.alertBox("error", error.message || "Google sign-in failed. Please try again.");
     });
@@ -123,8 +131,40 @@ const Register = () => {
 
 
 
-  const authWithGoogle = () => {
-    signInWithRedirect(auth, googleProvider);
+  const authWithGoogle = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      const fields = {
+        name: user.providerData[0].displayName,
+        email: user.providerData[0].email,
+        password: null,
+        avatar: user.providerData[0].photoURL,
+        mobile: user.providerData[0].phoneNumber,
+        role: "USER"
+      };
+      postData("/api/user/authWithGoogle", fields).then((res) => {
+        if (res?.error !== true) {
+          context.alertBox("success", res?.message);
+          localStorage.setItem("userEmail", fields.email);
+          localStorage.setItem("accessToken", res?.data?.accesstoken);
+          localStorage.setItem("refreshToken", res?.data?.refreshToken);
+          context.setIsLogin(true);
+          history("/");
+        } else {
+          context.alertBox("error", res?.message);
+        }
+      });
+    } catch (error) {
+      if (error.code === 'auth/popup-blocked') {
+        context.alertBox("info", "Popup was blocked — redirecting to Google instead...");
+        localStorage.setItem('googleAuthPending', '1');
+        signInWithRedirect(auth, googleProvider);
+      } else {
+        console.error("Google sign-in error:", error.code, error.message);
+        context.alertBox("error", error.message || "Google sign-in failed. Please try again.");
+      }
+    }
   }
 
   return (

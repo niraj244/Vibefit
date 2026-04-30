@@ -54,10 +54,28 @@ app.use(helmet({
 
 
 app.get("/", (request, response) => {
-    ///server to client
     response.json({
         message: "Server is running " + process.env.PORT
     })
+})
+
+// Email diagnostic endpoint — hit this URL to verify email works on Render
+app.get("/api/email-test", async (request, response) => {
+    const { sendEmail } = await import('./config/emailService.js');
+    const result = await sendEmail(
+        process.env.EMAIL,
+        'VibeFit Email Test',
+        'Email is working!',
+        '<h1>VibeFit Email Test</h1><p>Email sending is working correctly from the server!</p>'
+    );
+    response.json({
+        success: result.success,
+        messageId: result.messageId,
+        error: result.error,
+        emailUser: process.env.EMAIL,
+        emailPassSet: !!process.env.EMAIL_PASS,
+        emailPassLength: process.env.EMAIL_PASS?.length
+    });
 })
 
 
