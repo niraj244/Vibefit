@@ -1,48 +1,44 @@
-// Uses Brevo (formerly Sendinblue) HTTP API — works from any host (HTTPS, not SMTP)
-// Render blocks outbound SMTP; this API call goes over port 443 which is never blocked.
+// Uses SendGrid HTTP API — works from any host including Render (HTTPS port 443, never blocked)
+// Free tier: 100 emails/day forever. Sign up at sendgrid.com — no domain needed, just verify your email.
 
 async function sendEmail(to, subject, text, html) {
   try {
-    const apiKey = process.env.BREVO_API_KEY;
+    const apiKey = process.env.SENDGRID_API_KEY;
     const senderEmail = process.env.EMAIL;
 
-    console.log('[Email] Sending to:', to, '| From:', senderEmail, '| Brevo key set:', !!apiKey);
+    console.log('[Email] Sending to:', to, '| From:', senderEmail, '| API key set:', !!apiKey);
 
     if (!apiKey) {
-      console.error('[Email] BREVO_API_KEY is not set!');
-      return { success: false, error: 'BREVO_API_KEY env var missing' };
+      console.error('[Email] SENDGRID_API_KEY is not set!');
+      return { success: false, error: 'SENDGRID_API_KEY env var missing' };
     }
     if (!senderEmail) {
       console.error('[Email] EMAIL env var is not set!');
       return { success: false, error: 'EMAIL env var missing' };
     }
 
-    const toList = Array.isArray(to)
-      ? to.map(e => ({ email: e }))
-      : [{ email: to }];
+    const toList = Array.isArray(to) ? to : [to];
 
-    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
-        'api-key': apiKey,
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
       },
       body: JSON.stringify({
-        sender: { name: 'VibeFit', email: senderEmail },
-        to: toList,
+        personalizations: [{ to: toList.map(email => ({ email })) }],
+        from: { email: senderEmail, name: 'VibeFit' },
         subject,
-        htmlContent: html || text,
+        content: [{ type: 'text/html', value: html || text }],
       }),
     });
 
-    const data = await response.json();
-
-    if (response.ok) {
-      console.log('[Email] Sent successfully! MessageId:', data.messageId);
-      return { success: true, messageId: data.messageId };
+    if (response.status === 202) {
+      console.log('[Email] Sent successfully to:', to);
+      return { success: true, messageId: `sg-${Date.now()}` };
     } else {
-      console.error('[Email] Brevo API error:', JSON.stringify(data));
+      const data = await response.json();
+      console.error('[Email] SendGrid error:', JSON.stringify(data));
       return { success: false, error: JSON.stringify(data) };
     }
   } catch (error) {

@@ -73,8 +73,8 @@ app.get("/api/email-test", async (request, response) => {
         messageId: result.messageId,
         error: result.error,
         emailUser: process.env.EMAIL,
-        brevoApiKeySet: !!process.env.BREVO_API_KEY,
-        brevoApiKeyLength: process.env.BREVO_API_KEY?.length
+        sendgridApiKeySet: !!process.env.SENDGRID_API_KEY,
+        sendgridApiKeyLength: process.env.SENDGRID_API_KEY?.length
     });
 })
 
