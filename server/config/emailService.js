@@ -1,48 +1,64 @@
-// Uses SendGrid HTTP API — works from any host including Render (HTTPS port 443, never blocked)
-// Free tier: 100 emails/day forever. Sign up at sendgrid.com — no domain needed, just verify your email.
+// Uses Gmail API over HTTPS — completely free, 500 emails/day, no SMTP ports needed.
+// Requires GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN env vars.
+// See setup instructions in the conversation.
+
+import { google } from 'googleapis';
+
+function getGmailClient() {
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GMAIL_CLIENT_ID,
+    process.env.GMAIL_CLIENT_SECRET,
+    'https://developers.google.com/oauthplayground'
+  );
+  oauth2Client.setCredentials({
+    refresh_token: process.env.GMAIL_REFRESH_TOKEN,
+  });
+  return google.gmail({ version: 'v1', auth: oauth2Client });
+}
 
 async function sendEmail(to, subject, text, html) {
   try {
-    const apiKey = process.env.SENDGRID_API_KEY;
+    const clientId = process.env.GMAIL_CLIENT_ID;
+    const clientSecret = process.env.GMAIL_CLIENT_SECRET;
+    const refreshToken = process.env.GMAIL_REFRESH_TOKEN;
     const senderEmail = process.env.EMAIL;
 
-    console.log('[Email] Sending to:', to, '| From:', senderEmail, '| API key set:', !!apiKey);
+    console.log('[Email] Sending to:', to);
+    console.log('[Email] Gmail OAuth - clientId set:', !!clientId, '| secret set:', !!clientSecret, '| refresh token set:', !!refreshToken);
 
-    if (!apiKey) {
-      console.error('[Email] SENDGRID_API_KEY is not set!');
-      return { success: false, error: 'SENDGRID_API_KEY env var missing' };
-    }
-    if (!senderEmail) {
-      console.error('[Email] EMAIL env var is not set!');
-      return { success: false, error: 'EMAIL env var missing' };
+    if (!clientId || !clientSecret || !refreshToken || !senderEmail) {
+      console.error('[Email] Missing Gmail OAuth env vars!');
+      return { success: false, error: 'Missing GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN, or EMAIL' };
     }
 
-    const toList = Array.isArray(to) ? to : [to];
+    const gmail = getGmailClient();
+    const toList = Array.isArray(to) ? to.join(', ') : to;
 
-    const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        personalizations: [{ to: toList.map(email => ({ email })) }],
-        from: { email: senderEmail, name: 'VibeFit' },
-        subject,
-        content: [{ type: 'text/html', value: html || text }],
-      }),
+    const message = [
+      `To: ${toList}`,
+      `From: VibeFit <${senderEmail}>`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      html || text,
+    ].join('\r\n');
+
+    const encodedMessage = Buffer.from(message)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    const result = await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw: encodedMessage },
     });
 
-    if (response.status === 202) {
-      console.log('[Email] Sent successfully to:', to);
-      return { success: true, messageId: `sg-${Date.now()}` };
-    } else {
-      const data = await response.json();
-      console.error('[Email] SendGrid error:', JSON.stringify(data));
-      return { success: false, error: JSON.stringify(data) };
-    }
+    console.log('[Email] Sent successfully via Gmail API! ID:', result.data.id);
+    return { success: true, messageId: result.data.id };
   } catch (error) {
-    console.error('[Email] Unexpected error:', error.message);
+    console.error('[Email] Gmail API error:', error.message);
     return { success: false, error: error.message };
   }
 }

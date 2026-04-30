@@ -73,8 +73,9 @@ app.get("/api/email-test", async (request, response) => {
         messageId: result.messageId,
         error: result.error,
         emailUser: process.env.EMAIL,
-        sendgridApiKeySet: !!process.env.SENDGRID_API_KEY,
-        sendgridApiKeyLength: process.env.SENDGRID_API_KEY?.length
+        gmailClientIdSet: !!process.env.GMAIL_CLIENT_ID,
+        gmailSecretSet: !!process.env.GMAIL_CLIENT_SECRET,
+        gmailRefreshTokenSet: !!process.env.GMAIL_REFRESH_TOKEN
     });
 })
 
