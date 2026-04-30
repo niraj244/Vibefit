@@ -401,17 +401,17 @@ const Checkout = () => {
 
 
       postData(`/api/order/create`, payLoad).then((res) => {
-        context.alertBox("success", res?.message);
-
         if (res?.error === false) {
-          deleteData(`/api/cart/emptyCart/${user?._id}`).then((res) => {
+          context.alertBox("success", res?.message);
+          deleteData(`/api/cart/emptyCart/${user?._id}`).then(() => {
             context?.getCartItems();
-            setIsloading(false);
-          })
+          });
+          setIsloading(false);
+          history("/order/success");
         } else {
-          context.alertBox("error", res?.message);
+          context.alertBox("error", res?.message || "Failed to place order");
+          setIsloading(false);
         }
-        history("/order/success");
       });
     } else {
       context.alertBox("error", "Please add address");

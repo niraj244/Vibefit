@@ -45,17 +45,15 @@ export const createOrderController = async (request, response) => {
 
         const user = await UserModel.findOne({ _id: request.body.userId })
 
-        const recipients = [];
-        recipients.push(user?.email);
-
-        // sending email
-        await sendEmailFun({
-            sendTo: recipients,
-            subject: "Order Confirmation",
-            text: "",
-            html: OrderConfirmationEmail(user?.name, order)
-        })
-
+        // Send email in background — don't block the response
+        if (user?.email) {
+            sendEmailFun({
+                sendTo: [user.email],
+                subject: "Order Confirmation",
+                text: "",
+                html: OrderConfirmationEmail(user?.name, order)
+            }).catch(err => console.error("Order email error:", err));
+        }
 
         return response.status(200).json({
             error: false,
@@ -325,17 +323,15 @@ export const captureOrderPaypalController = async (request, response) => {
 
         const user = await UserModel.findOne({ _id: request.body.userId })
 
-        const recipients = [];
-        recipients.push(user?.email);
-
-        // sending email
-        await sendEmailFun({
-            sendTo: recipients,
-            subject: "Order Confirmation",
-            text: "",
-            html: OrderConfirmationEmail(user?.name, order)
-        })
-
+        // Send email in background — don't block the response
+        if (user?.email) {
+            sendEmailFun({
+                sendTo: [user.email],
+                subject: "Order Confirmation",
+                text: "",
+                html: OrderConfirmationEmail(user?.name, order)
+            }).catch(err => console.error("PayPal order email error:", err));
+        }
 
         for (let i = 0; i < request.body.products.length; i++) {
 
@@ -983,16 +979,15 @@ export const verifyEsewaPaymentController = async (request, response) => {
                 }
             }
 
-            // Send confirmation email
+            // Send confirmation email in background
             const user = await UserModel.findOne({ _id: userId });
-            if (user) {
-                const recipients = [user.email];
-                await sendEmailFun({
-                    sendTo: recipients,
+            if (user?.email) {
+                sendEmailFun({
+                    sendTo: [user.email],
                     subject: "Order Confirmation",
                     text: "",
                     html: OrderConfirmationEmail(user.name, order)
-                });
+                }).catch(err => console.error("eSewa order email error:", err));
             }
 
             // Clear cart
