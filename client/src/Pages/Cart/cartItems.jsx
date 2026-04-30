@@ -5,7 +5,7 @@ import MenuItem from "@mui/material/MenuItem";
 import { GoTriangleDown } from "react-icons/go";
 import Rating from "@mui/material/Rating";
 import { IoCloseSharp } from "react-icons/io5";
-import { deleteData, editData, fetchDataFromApi } from "../../utils/api";
+import { editData, fetchDataFromApi } from "../../utils/api";
 import { MyContext } from "../../App";
 import { formatPrice } from "../../utils/currency";
 
@@ -39,77 +39,54 @@ const CartItems = (props) => {
     setQtyAnchorEl(null);
     if (value !== null) {
       setSelectedQty(value);
-
-      const cartObj = {
-        _id: props?.item?._id,
-        qty: value,
-        subTotal: props?.item?.price * value
-      }
-
-      editData("/api/cart/update-qty", cartObj).then((res) => {
+      context.updateCartItemQty(props?.item, value).then((res) => {
         if (res?.data?.error === false) {
-          context.alertBox("success", res?.data?.message);
           context?.getCartItems();
         }
-      })
-
-
-
+      }).catch(() => {});
     }
   };
 
 
   const updateCart = (selectedVal, qty, field) => {
-    handleCloseSize(selectedVal)
+    handleCloseSize(selectedVal);
 
-    const cartObj = {
-      _id: props?.item?._id,
-      qty: qty,
-      subTotal: props?.item?.price * qty,
-      size: props?.item?.size !== "" ? selectedVal : '',
-    }
-
-
-    //if product size available
     if (field === "size") {
+      if (!context.isLogin) {
+        context.updateCartItemSize(props?.item, selectedVal);
+        return;
+      }
+
+      const cartObj = {
+        _id: props?.item?._id,
+        qty: qty,
+        subTotal: props?.item?.price * qty,
+        size: selectedVal,
+      };
 
       fetchDataFromApi(`/api/product/${props?.item?.productId}`).then((res) => {
         const product = res?.product;
-
-
-        const item = product?.size?.filter((size) =>
-          size?.includes(selectedVal)
-        )
-
+        const item = product?.size?.filter((size) => size?.includes(selectedVal));
         if (item?.length !== 0) {
           editData("/api/cart/update-qty", cartObj).then((res) => {
             if (res?.data?.error === false) {
               context.alertBox("success", res?.data?.message);
               context?.getCartItems();
             }
-          })
+          });
         } else {
           context.alertBox("error", `Product not available with the size of ${selectedVal}`);
         }
-
-
-      })
-
+      });
     }
-
-
-
-  }
+  };
 
 
 
 
-  const removeItem = (id) => {
-    deleteData(`/api/cart/delete-cart-item/${id}`).then((res) => {
-      context.alertBox("success", "Product removed from cart");
-      context?.getCartItems();
-    })
-  }
+  const removeItem = () => {
+    context.removeCartItem(props.item);
+  };
 
 
   return (
@@ -124,7 +101,7 @@ const CartItems = (props) => {
       </div>
 
       <div className="info  w-[70%]  sm:w-[80%]  lg:w-[85%] relative">
-        <IoCloseSharp className="cursor-pointer absolute top-[0px] right-[0px] text-[22px] link transition-all" onClick={() => removeItem(props?.item?._id)} />
+        <IoCloseSharp className="cursor-pointer absolute top-[0px] right-[0px] text-[22px] link transition-all" onClick={() => removeItem()} />
         <span className="text-[13px]">{props?.item?.brand}</span>
         <h3 className="text-[13px] sm:text-[15px] w-[80%]">
           <Link to={`/product/${props?.item?.productId}`} className="link">{props?.item?.productTitle?.substr(0, context?.windowWidth < 992 ? 30 : 120) + '...'}</Link>

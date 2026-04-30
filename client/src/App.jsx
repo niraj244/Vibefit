@@ -19,7 +19,7 @@ import MyList from "./Pages/MyList";
 import Orders from "./Pages/Orders";
 
 import toast, { Toaster } from 'react-hot-toast';
-import { fetchDataFromApi, postData } from "./utils/api";
+import { fetchDataFromApi, postData, deleteData, editData } from "./utils/api";
 import Address from "./Pages/MyAccount/address";
 import { OrderSuccess } from "./Pages/Orders/success";
 import { OrderFailed } from "./Pages/Orders/failed";
@@ -89,16 +89,18 @@ function App() {
 
     if (token !== undefined && token !== null && token !== "") {
       setIsLogin(true);
-
       getCartItems();
       getMyListData();
       getUserDetails();
-
     } else {
       setIsLogin(false);
+      try {
+        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]');
+        setCartData(guestCart);
+      } catch {
+        setCartData([]);
+      }
     }
-
-
   }, [isLogin])
 
 
@@ -156,10 +158,44 @@ function App() {
 
 
   const addToCart = (product, userId, quantity) => {
+    if (!isLogin) {
+      const guestItem = {
+        _id: `guest_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+        productTitle: product?.name,
+        image: product?.image,
+        rating: product?.rating,
+        price: product?.price,
+        oldPrice: product?.oldPrice,
+        discount: product?.discount,
+        quantity: quantity,
+        subTotal: parseInt(product?.price * quantity),
+        productId: product?._id,
+        countInStock: product?.countInStock,
+        brand: product?.brand,
+        size: Array.isArray(product?.size) ? product.size[0] : product?.size,
+        isGuest: true,
+      };
 
-    if (userId === undefined) {
-      alertBox("error", "you are not login please login first");
-      return false;
+      setCartData(prevCart => {
+        const existing = prevCart.findIndex(
+          i => i.productId === guestItem.productId && i.size === guestItem.size
+        );
+        const newCart = [...prevCart];
+        if (existing >= 0) {
+          newCart[existing] = {
+            ...newCart[existing],
+            quantity: newCart[existing].quantity + quantity,
+            subTotal: newCart[existing].price * (newCart[existing].quantity + quantity),
+          };
+        } else {
+          newCart.push(guestItem);
+        }
+        localStorage.setItem('guestCart', JSON.stringify(newCart));
+        return newCart;
+      });
+
+      alertBox("success", "Added to cart");
+      return;
     }
 
     const data = {
@@ -175,34 +211,113 @@ function App() {
       countInStock: product?.countInStock,
       brand: product?.brand,
       size: product?.size,
-    }
-
+    };
 
     postData("/api/cart/add", data).then((res) => {
       if (res?.error === false) {
         alertBox("success", res?.message);
-
         getCartItems();
-
-
       } else {
         alertBox("error", res?.message);
       }
-
-    })
-
-
-  }
-
-
+    });
+  };
 
   const getCartItems = () => {
+    if (!isLogin) {
+      try {
+        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '[]');
+        setCartData(guestCart);
+      } catch {
+        setCartData([]);
+      }
+      return;
+    }
     fetchDataFromApi(`/api/cart/get`).then((res) => {
       if (res?.error === false) {
         setCartData(res?.data);
       }
-    })
-  }
+    });
+  };
+
+  const mergeGuestCart = async () => {
+    const stored = localStorage.getItem('guestCart');
+    if (!stored) return;
+    try {
+      const items = JSON.parse(stored);
+      if (!items || items.length === 0) {
+        localStorage.removeItem('guestCart');
+        return;
+      }
+      for (const item of items) {
+        await postData("/api/cart/add", {
+          productTitle: item.productTitle,
+          image: item.image,
+          rating: item.rating,
+          price: item.price,
+          oldPrice: item.oldPrice,
+          discount: item.discount,
+          quantity: item.quantity,
+          subTotal: item.subTotal,
+          productId: item.productId,
+          countInStock: item.countInStock,
+          brand: item.brand,
+          size: item.size,
+        });
+      }
+      localStorage.removeItem('guestCart');
+      setCartData([]);
+    } catch (e) {
+      console.error('Failed to merge guest cart:', e);
+    }
+  };
+
+  const removeCartItem = (item) => {
+    if (!isLogin) {
+      setCartData(prevCart => {
+        const newCart = prevCart.filter(i => i._id !== item._id);
+        localStorage.setItem('guestCart', JSON.stringify(newCart));
+        return newCart;
+      });
+      alertBox("success", "Product removed from cart");
+      return;
+    }
+    deleteData(`/api/cart/delete-cart-item/${item._id}`).then(() => {
+      alertBox("success", "Product removed from cart");
+      getCartItems();
+    });
+  };
+
+  const updateCartItemQty = (item, newQty) => {
+    if (!isLogin) {
+      setCartData(prevCart => {
+        const newCart = prevCart.map(i =>
+          i._id === item._id
+            ? { ...i, quantity: newQty, subTotal: i.price * newQty }
+            : i
+        );
+        localStorage.setItem('guestCart', JSON.stringify(newCart));
+        return newCart;
+      });
+      alertBox("success", "Quantity updated");
+      return Promise.resolve({ data: { error: false } });
+    }
+    return editData("/api/cart/update-qty", {
+      _id: item._id,
+      qty: newQty,
+      subTotal: item.price * newQty,
+    });
+  };
+
+  const updateCartItemSize = (item, newSize) => {
+    setCartData(prevCart => {
+      const newCart = prevCart.map(i =>
+        i._id === item._id ? { ...i, size: newSize } : i
+      );
+      localStorage.setItem('guestCart', JSON.stringify(newCart));
+      return newCart;
+    });
+  };
 
 
 
@@ -294,6 +409,10 @@ function App() {
     cartData,
     setCartData,
     getCartItems,
+    mergeGuestCart,
+    removeCartItem,
+    updateCartItemQty,
+    updateCartItemSize,
     myListData,
     setMyListData,
     getMyListData,

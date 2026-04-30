@@ -3,7 +3,7 @@ import TextField from "@mui/material/TextField";
 import Button from "@mui/material/Button";
 import { IoMdEye } from "react-icons/io";
 import { IoMdEyeOff } from "react-icons/io";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useLocation } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { MyContext } from "../../App";
 import CircularProgress from '@mui/material/CircularProgress';
@@ -24,6 +24,8 @@ const Login = () => {
 
   const context  = useContext(MyContext);
   const history = useNavigate();
+  const location = useLocation();
+  const redirectTo = location.state?.from || "/";
 
  
   useEffect(()=>{
@@ -93,35 +95,29 @@ const Login = () => {
       }
   
   
-      postData("/api/user/login", formFields, { withCredentials: true }).then((res) => {
-        console.log(res)
-
+      postData("/api/user/login", formFields, { withCredentials: true }).then(async (res) => {
         if (res?.error !== true) {
           setIsLoading(false);
           context.alertBox("success", res?.message);
-          setFormsFields({
-            email: "",
-            password: ""
-          })
+          setFormsFields({ email: "", password: "" });
 
-          localStorage.setItem("accessToken",res?.data?.accesstoken);
-          localStorage.setItem("refreshToken",res?.data?.refreshToken);
+          localStorage.setItem("accessToken", res?.data?.accesstoken);
+          localStorage.setItem("refreshToken", res?.data?.refreshToken);
 
+          await context.mergeGuestCart();
           context.setIsLogin(true);
 
-          // If email needs verification, redirect to verification page
           if (res?.needsVerification === true) {
             localStorage.setItem("userEmail", formFields.email);
-            localStorage.removeItem("actionType"); // Remove forgot-password action type if exists
-            history("/verify")
+            localStorage.removeItem("actionType");
+            history("/verify");
           } else {
-            history("/")
+            history(redirectTo);
           }
         } else {
           context.alertBox("error", res?.message);
           setIsLoading(false);
         }
-
       })
   
   
@@ -149,23 +145,22 @@ const Login = () => {
             };
     
     
-            postData("/api/user/authWithGoogle", fields).then((res) => {
-    
+            postData("/api/user/authWithGoogle", fields).then(async (res) => {
               if (res?.error !== true) {
                 setIsLoading(false);
                 context.alertBox("success", res?.message);
-                localStorage.setItem("userEmail", fields.email)
+                localStorage.setItem("userEmail", fields.email);
                 localStorage.setItem("accessToken", res?.data?.accesstoken);
                 localStorage.setItem("refreshToken", res?.data?.refreshToken);
-    
+
+                await context.mergeGuestCart();
                 context.setIsLogin(true);
-    
-                history("/")
+
+                history(redirectTo);
               } else {
                 context.alertBox("error", res?.message);
                 setIsLoading(false);
               }
-    
             })
     
             console.log(user)

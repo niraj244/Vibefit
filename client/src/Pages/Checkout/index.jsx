@@ -27,11 +27,15 @@ const Checkout = () => {
   const history = useNavigate();
 
   useEffect(() => {
+    if (!context.isLogin) {
+      context.alertBox("info", "Please login to continue to checkout");
+      history("/login", { state: { from: "/checkout" } });
+      return;
+    }
     window.scrollTo(0, 0);
-    setUserData(context?.userData)
+    setUserData(context?.userData);
     setSelectedAddress(context?.userData?.address_details[0]?._id);
-
-  }, [context?.userData, userData])
+  }, [context?.userData, userData, context.isLogin])
 
 
   useEffect(() => {
