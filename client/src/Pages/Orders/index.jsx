@@ -7,6 +7,15 @@ import { FaAngleUp } from "react-icons/fa6";
 import { fetchDataFromApi } from "../../utils/api";
 import Pagination from "@mui/material/Pagination";
 import { formatPrice } from "../../utils/currency";
+import { Link } from "react-router-dom";
+
+const formatDateTime = (isoString) => {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  const date = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
+  const time = d.toLocaleTimeString('en-GB'); // HH:MM:SS
+  return `${date} ${time}`;
+};
 
 const Orders = () => {
   const [isOpenOrderdProduct, setIsOpenOrderdProduct] = useState(null);
@@ -20,12 +29,11 @@ const Orders = () => {
     } else {
       setIsOpenOrderdProduct(index);
     }
-
   };
 
 
   useEffect(() => {
-    fetchDataFromApi(`/api/order/order-list/orders?page=${page}&limit=5`).then((res) => {
+    fetchDataFromApi(`/api/order/order-list/orders?page=${page}&limit=10`).then((res) => {
       if (res?.error === false) {
         setOrders(res)
       }
@@ -62,31 +70,16 @@ const Orders = () => {
                         Payment Id
                       </th>
                       <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Phone Number
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
                         Address
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Pincode
                       </th>
                       <th scope="col" className="px-6 py-3 whitespace-nowrap">
                         Total Amount
                       </th>
                       <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Email
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        User Id
-                      </th>
-                      <th scope="col" className="px-6 py-3 whitespace-nowrap">
                         Order Status
                       </th>
                       <th scope="col" className="px-6 py-3 whitespace-nowrap">
-                        Date
+                        Date &amp; Time
                       </th>
                     </tr>
                   </thead>
@@ -105,7 +98,6 @@ const Orders = () => {
                                   {
                                     isOpenOrderdProduct === index ? <FaAngleUp className="text-[16px] text-[rgba(0,0,0,0.7)]" /> : <FaAngleDown className="text-[16px] text-[rgba(0,0,0,0.7)]" />
                                   }
-
                                 </Button>
                               </td>
                               <td className="px-6 py-4 font-[500]">
@@ -118,15 +110,9 @@ const Orders = () => {
                                 <span className="text-primary whitespace-nowrap text-[13px]">{order?.paymentId ? order?.paymentId : 'CASH ON DELIVERY'}</span>
                               </td>
 
-                              <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                                {order?.userId?.name}
-                              </td>
-
-                              <td className="px-6 py-4 font-[500]">{order?.delivery_address?.mobile}</td>
-
                               <td className="px-6 py-4 font-[500]">
                                <span className='inline-block text-[13px] font-[500] p-1 bg-[#f1f1f1] rounded-md'>{order?.delivery_address?.addressType}</span>
-                                <span className="block w-[400px]">
+                                <span className="block w-[300px]">
                                   {order?.delivery_address?.
                                     address_line1 + " " +
                                     order?.delivery_address?.city + " " +
@@ -137,69 +123,39 @@ const Orders = () => {
                                 </span>
                               </td>
 
-                              <td className="px-6 py-4 font-[500]">{order?.delivery_address?.pincode}</td>
-
-                              <td className="px-6 py-4 font-[500]">{order?.totalAmt}</td>
-
-                              <td className="px-6 py-4 font-[500]">
-                                {order?.userId?.email}
-                              </td>
-
-                              <td className="px-6 py-4 font-[500]">
-                                <span className="text-primary">
-                                  {order?.userId?._id}
-                                </span>
-                              </td>
+                              <td className="px-6 py-4 font-[500]">{formatPrice(order?.totalAmt)}</td>
 
                               <td className="px-6 py-4 font-[500]">
                                 <Badge status={order?.order_status} />
                               </td>
                               <td className="px-6 py-4 font-[500] whitespace-nowrap">
-                                {order?.createdAt?.split("T")[0]}
+                                {formatDateTime(order?.createdAt)}
                               </td>
                             </tr>
 
                             {isOpenOrderdProduct === index && (
                               <tr>
-                                <td className="pl-20" colSpan="6">
+                                <td className="pl-20" colSpan="7">
                                   <div className="relative overflow-x-auto">
                                     <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                                       <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                         <tr>
-                                          <th
-                                            scope="col"
-                                            className="px-6 py-3 whitespace-nowrap"
-                                          >
-                                            Product Id
-                                          </th>
-                                          <th
-                                            scope="col"
-                                            className="px-6 py-3 whitespace-nowrap"
-                                          >
+                                          <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                             Product Title
                                           </th>
-                                          <th
-                                            scope="col"
-                                            className="px-6 py-3 whitespace-nowrap"
-                                          >
+                                          <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                             Image
                                           </th>
-                                          <th
-                                            scope="col"
-                                            className="px-6 py-3 whitespace-nowrap"
-                                          >
+                                          <th scope="col" className="px-6 py-3 whitespace-nowrap">
+                                            Size
+                                          </th>
+                                          <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                             Quantity
                                           </th>
-                                          <th
-                                            scope="col"
-                                            className="px-6 py-3 whitespace-nowrap"
-                                          >
+                                          <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                             Price
                                           </th>
-                                          <th
-                                            scope="col"
-                                            className="px-6 py-3 whitespace-nowrap"
-                                          >
+                                          <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                             Sub Total
                                           </th>
                                         </tr>
@@ -208,23 +164,26 @@ const Orders = () => {
                                         {
                                           order?.products?.map((item, index) => {
                                             return (
-                                              <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                                              <tr key={index} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
                                                 <td className="px-6 py-4 font-[500]">
-                                                  <span className="text-gray-600">
-                                                    {item?._id}
-                                                  </span>
-                                                </td>
-                                                <td className="px-6 py-4 font-[500]">
-                                                  <div className="w-[200px]">
-                                                    {item?.productTitle}
-                                                  </div>
+                                                  <Link to={`/product/${item?.productId}`} className="link hover:text-primary transition-all">
+                                                    <div className="w-[200px]">
+                                                      {item?.productTitle}
+                                                    </div>
+                                                  </Link>
                                                 </td>
 
                                                 <td className="px-6 py-4 font-[500]">
-                                                  <img
-                                                    src={item?.image}
-                                                    className="w-[40px] h-[40px] object-cover rounded-md"
-                                                  />
+                                                  <Link to={`/product/${item?.productId}`}>
+                                                    <img
+                                                      src={item?.image}
+                                                      className="w-[40px] h-[40px] object-cover rounded-md hover:opacity-80 transition-all"
+                                                    />
+                                                  </Link>
+                                                </td>
+
+                                                <td className="px-6 py-4 font-[500]">
+                                                  {item?.size ? item.size : <span className="text-gray-400">—</span>}
                                                 </td>
 
                                                 <td className="px-6 py-4 font-[500] whitespace-nowrap">
@@ -239,12 +198,8 @@ const Orders = () => {
                                           })
                                         }
 
-
                                         <tr>
-                                          <td
-                                            className="bg-[#f1f1f1]"
-                                            colSpan="12"
-                                          ></td>
+                                          <td className="bg-[#f1f1f1]" colSpan="12"></td>
                                         </tr>
                                       </tbody>
                                     </table>
@@ -257,10 +212,6 @@ const Orders = () => {
                       })
 
                     }
-
-
-
-
 
 
                   </tbody>
