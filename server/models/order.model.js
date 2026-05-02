@@ -22,6 +22,10 @@ const orderSchema = new mongoose.Schema({
             image: {
                 type: String
             },
+            size: {
+                type: String,
+                default: ""
+            },
             subTotal: {
                 type: Number
             }
