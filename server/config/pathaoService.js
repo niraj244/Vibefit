@@ -62,7 +62,8 @@ async function getPathaoTracking(consignmentId) {
     throw new Error(`Pathao tracking request failed (${res.status}): ${err}`);
   }
 
-  return { configured: true, ...(await res.json()) };
+  const responseJson = await res.json();
+  return { configured: true, ...(responseJson.data || responseJson) };
 }
 
 export { getPathaoTracking };
