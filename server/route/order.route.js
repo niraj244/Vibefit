@@ -1,6 +1,6 @@
 import { Router } from "express";
 import auth from "../middlewares/auth.js";
-import {  captureOrderPaypalController, createOrderController, createOrderPaypalController, deleteOrder, esewaFailureController, getOrderDetailsController, getTotalOrdersCountController, getUserOrderDetailsController, initiateEsewaPaymentController, totalSalesController, totalUsersController, updateOrderStatusController, verifyEsewaPaymentController } from "../controllers/order.controller.js";
+import {  captureOrderPaypalController, createOrderController, createOrderPaypalController, deleteOrder, esewaFailureController, getOrderDetailsController, getTotalOrdersCountController, getUserOrderDetailsController, initiateEsewaPaymentController, totalSalesController, totalUsersController, updateOrderStatusController, updatePathaoConsignmentIdController, verifyEsewaPaymentController } from "../controllers/order.controller.js";
 
 const orderRouter = Router();
 
@@ -14,6 +14,7 @@ orderRouter.get('/sales',auth,totalSalesController)
 orderRouter.get('/users',auth,totalUsersController)
 orderRouter.get('/order-list/orders',auth,getUserOrderDetailsController)
 orderRouter.delete('/deleteOrder/:id',auth,deleteOrder)
+orderRouter.put('/pathao-consignment/:id',auth,updatePathaoConsignmentIdController)
 
 // eSewa routes
 orderRouter.post('/initiate-esewa-payment',auth,initiateEsewaPaymentController)

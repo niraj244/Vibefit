@@ -50,6 +50,10 @@ const orderSchema = new mongoose.Schema({
     totalAmt: {
         type: Number,
         default: 0
+    },
+    pathaoConsignmentId: {
+        type: String,
+        default: ""
     }
 }, {
     timestamps: true

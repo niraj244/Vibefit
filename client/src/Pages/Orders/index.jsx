@@ -8,6 +8,9 @@ import { fetchDataFromApi } from "../../utils/api";
 import Pagination from "@mui/material/Pagination";
 import { formatPrice } from "../../utils/currency";
 import { Link } from "react-router-dom";
+import { MdContentCopy, MdOpenInNew } from "react-icons/md";
+
+const PATHAO_TRACKING_URL = "https://pathao.com/np/parcel/";
 
 const formatDateTime = (isoString) => {
   if (!isoString) return '';
@@ -15,6 +18,74 @@ const formatDateTime = (isoString) => {
   const date = d.toLocaleDateString('en-CA'); // YYYY-MM-DD
   const time = d.toLocaleTimeString('en-GB'); // HH:MM:SS
   return `${date} ${time}`;
+};
+
+const PathaoTrackingCard = ({ consignmentId }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(consignmentId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  if (!consignmentId) return (
+    <div className="mt-4 mb-2 p-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 text-[13px] text-gray-500 text-center">
+      Tracking ID will be available after your parcel is handed over to Pathao Nepal.
+    </div>
+  );
+
+  return (
+    <div className="mt-4 mb-2 rounded-xl border border-[rgba(0,0,0,0.1)] bg-[#f0faf4] overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 bg-[#1a8c4e] text-white">
+        <span className="text-[15px]">🚚</span>
+        <span className="font-[600] text-[14px]">Track your Pathao Nepal delivery</span>
+      </div>
+      <div className="px-4 py-4">
+        <p className="text-[13px] text-gray-600 mb-3">
+          Your parcel has been sent through Pathao Nepal.
+        </p>
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <span className="text-[13px] text-gray-500 font-[500]">Tracking ID:</span>
+          <span className="font-mono font-[700] text-[15px] text-[#1a8c4e] tracking-wide bg-white px-3 py-1 rounded-md border border-[#c3e6cb]">
+            {consignmentId}
+          </span>
+        </div>
+        <p className="text-[12px] text-gray-500 mb-4">
+          Copy this Tracking ID and use it in the Pathao app or Pathao Nepal tracking page if available.
+        </p>
+        <p className="text-[12px] text-gray-400 mb-4">
+          Tracking status may show: <span className="font-[500]">Request Accepted</span> · <span className="font-[500]">In Transit</span> · <span className="font-[500]">Delivered</span>
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            size="small"
+            variant="outlined"
+            className="!border-[#1a8c4e] !text-[#1a8c4e] !capitalize !text-[12px] !font-[600]"
+            startIcon={<MdContentCopy />}
+            onClick={handleCopy}
+          >
+            {copied ? 'Copied!' : 'Copy Tracking ID'}
+          </Button>
+          <a
+            href={PATHAO_TRACKING_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button
+              size="small"
+              variant="contained"
+              className="!bg-[#1a8c4e] !text-white !capitalize !text-[12px] !font-[600]"
+              startIcon={<MdOpenInNew />}
+            >
+              Open Pathao Nepal
+            </Button>
+          </a>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const Orders = () => {
@@ -135,7 +206,8 @@ const Orders = () => {
 
                             {isOpenOrderdProduct === index && (
                               <tr>
-                                <td className="pl-20" colSpan="7">
+                                <td className="px-6 pb-4" colSpan="7">
+                                  <PathaoTrackingCard consignmentId={order?.pathaoConsignmentId} />
                                   <div className="relative overflow-x-auto">
                                     <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                                       <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">

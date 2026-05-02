@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from "@mui/material";
+import { Button, TextField } from "@mui/material";
 import { FaAngleDown } from "react-icons/fa6";
 import Badge from "../../Components/Badge";
 import SearchBox from '../../Components/SearchBox';
@@ -24,6 +24,8 @@ export const Orders = () => {
   const [pageOrder, setPageOrder] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [totalOrdersData, setTotalOrdersData] = useState([]);
+  const [pathaoInputs, setPathaoInputs] = useState({});
+  const [pathaoSaving, setPathaoSaving] = useState({});
 
   const context = useContext(MyContext);
 
@@ -60,6 +62,12 @@ export const Orders = () => {
       if (res?.error === false) {
         setOrdersData(res?.data)
         context?.setProgress(100);
+        // Initialise pathao inputs from existing data
+        const inputs = {};
+        res?.data?.forEach(order => {
+          inputs[order._id] = order.pathaoConsignmentId || '';
+        });
+        setPathaoInputs(prev => ({ ...prev, ...inputs }));
       }
     })
     fetchDataFromApi(`/api/order/order-list`).then((res) => {
@@ -86,6 +94,11 @@ export const Orders = () => {
         if (res?.error === false) {
           setOrders(res)
           setOrdersData(res?.data)
+          const inputs = {};
+          res?.data?.forEach(order => {
+            inputs[order._id] = order.pathaoConsignmentId || '';
+          });
+          setPathaoInputs(prev => ({ ...prev, ...inputs }));
         }
       })
     }
@@ -93,29 +106,46 @@ export const Orders = () => {
   }, [searchQuery])
 
 
-    const deleteOrder = (id) => {
-          if (context?.userData?.role === "ADMIN") {
-              deleteData(`/api/order/deleteOrder/${id}`).then((res) => {
-                fetchDataFromApi(`/api/order/order-list?page=${pageOrder}&limit=5`).then((res) => {
-                  if (res?.error === false) {
-                    setOrdersData(res?.data)
-                    context?.setProgress(100);
-                    context.alertBox("success", "Order Delete successfully!");
-                  }
-                })
-
-                fetchDataFromApi(`/api/order/order-list`).then((res) => {
-                  if (res?.error === false) {
-                    setTotalOrdersData(res)
-                  }
-                })
-                
-              })
-          } else {
-              context.alertBox("error", "Only admin can delete data");
+  const deleteOrder = (id) => {
+    if (context?.userData?.role === "ADMIN") {
+      deleteData(`/api/order/deleteOrder/${id}`).then((res) => {
+        fetchDataFromApi(`/api/order/order-list?page=${pageOrder}&limit=5`).then((res) => {
+          if (res?.error === false) {
+            setOrdersData(res?.data)
+            context?.setProgress(100);
+            context.alertBox("success", "Order Delete successfully!");
           }
+        })
+
+        fetchDataFromApi(`/api/order/order-list`).then((res) => {
+          if (res?.error === false) {
+            setTotalOrdersData(res)
+          }
+        })
+
+      })
+    } else {
+      context.alertBox("error", "Only admin can delete data");
+    }
+  }
+
+  const savePathaoId = (orderId) => {
+    setPathaoSaving(prev => ({ ...prev, [orderId]: true }));
+    editData(`/api/order/pathao-consignment/${orderId}`, {
+      pathaoConsignmentId: pathaoInputs[orderId] || ''
+    }).then((res) => {
+      setPathaoSaving(prev => ({ ...prev, [orderId]: false }));
+      if (res?.data?.error === false || res?.error === false) {
+        context.alertBox("success", "Pathao Consignment ID saved!");
+      } else {
+        context.alertBox("error", "Failed to save Pathao Consignment ID");
       }
-  
+    }).catch(() => {
+      setPathaoSaving(prev => ({ ...prev, [orderId]: false }));
+      context.alertBox("error", "Failed to save Pathao Consignment ID");
+    });
+  };
+
 
   return (
     <div className="card my-2 md:mt-4 shadow-md sm:rounded-lg bg-white">
@@ -262,45 +292,56 @@ export const Orders = () => {
 
                     {isOpenOrderdProduct === index && (
                       <tr>
-                        <td className="pl-20" colSpan="6">
+                        <td className="pl-20" colSpan="13">
+                          {/* Pathao Consignment ID Input */}
+                          <div className="flex items-center gap-3 my-4 p-4 bg-[#f9f9f9] rounded-lg border border-[rgba(0,0,0,0.08)]">
+                            <span className="text-[13px] font-[600] whitespace-nowrap text-gray-700">
+                              🚚 Pathao Nepal Consignment ID:
+                            </span>
+                            <TextField
+                              size="small"
+                              placeholder="e.g. DS0407254C48WT"
+                              value={pathaoInputs[order._id] || ''}
+                              onChange={(e) => setPathaoInputs(prev => ({ ...prev, [order._id]: e.target.value }))}
+                              className="!w-[260px]"
+                              inputProps={{ style: { fontFamily: 'monospace', fontSize: '13px' } }}
+                            />
+                            <Button
+                              variant="contained"
+                              size="small"
+                              className="!bg-primary !text-white !capitalize"
+                              disabled={pathaoSaving[order._id]}
+                              onClick={() => savePathaoId(order._id)}
+                            >
+                              {pathaoSaving[order._id] ? 'Saving...' : 'Save'}
+                            </Button>
+                            {order?.pathaoConsignmentId && (
+                              <span className="text-[12px] text-green-600 font-[500]">
+                                ✓ Currently saved: <span className="font-mono">{order.pathaoConsignmentId}</span>
+                              </span>
+                            )}
+                          </div>
+
                           <div className="relative overflow-x-auto">
                             <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                               <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                                 <tr>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
+                                  <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                     Product Id
                                   </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
+                                  <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                     Product Title
                                   </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
+                                  <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                     Image
                                   </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
+                                  <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                     Quantity
                                   </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
+                                  <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                     Price
                                   </th>
-                                  <th
-                                    scope="col"
-                                    className="px-6 py-3 whitespace-nowrap"
-                                  >
+                                  <th scope="col" className="px-6 py-3 whitespace-nowrap">
                                     Sub Total
                                   </th>
                                 </tr>
@@ -309,7 +350,7 @@ export const Orders = () => {
                                 {
                                   order?.products?.map((item, index) => {
                                     return (
-                                      <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                                      <tr key={index} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
                                         <td className="px-6 py-4 font-[500]">
                                           <span className="text-gray-600">
                                             {item?._id}
@@ -342,10 +383,7 @@ export const Orders = () => {
 
 
                                 <tr>
-                                  <td
-                                    className="bg-[#f1f1f1]"
-                                    colSpan="12"
-                                  ></td>
+                                  <td className="bg-[#f1f1f1]" colSpan="12"></td>
                                 </tr>
                               </tbody>
                             </table>
@@ -358,10 +396,6 @@ export const Orders = () => {
               })
 
             }
-
-
-
-
 
 
           </tbody>
