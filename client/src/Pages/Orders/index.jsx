@@ -8,9 +8,9 @@ import { fetchDataFromApi } from "../../utils/api";
 import Pagination from "@mui/material/Pagination";
 import { formatPrice } from "../../utils/currency";
 import { Link } from "react-router-dom";
-import { MdContentCopy, MdOpenInNew } from "react-icons/md";
-
-const PATHAO_TRACKING_URL = "https://pathao.com/np/parcel/";
+import { MdContentCopy } from "react-icons/md";
+import CircularProgress from "@mui/material/CircularProgress";
+import { postData } from "../../utils/api";
 
 const formatDateTime = (isoString) => {
   if (!isoString) return '';
@@ -20,13 +20,55 @@ const formatDateTime = (isoString) => {
   return `${date} ${time}`;
 };
 
-const PathaoTrackingCard = ({ consignmentId }) => {
+const RETURN_REASONS = [
+  'Wrong item received',
+  'Damaged item',
+  'Item not as described',
+  'Changed my mind',
+  'Other',
+];
+
+const PathaoTrackingCard = ({ consignmentId, orderId, orderStatus, returnRequested, returnStatus: initReturnStatus }) => {
   const [copied, setCopied] = useState(false);
+  const [tracking, setTracking] = useState(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  const [trackingError, setTrackingError] = useState(null);
+  const [showReturnForm, setShowReturnForm] = useState(false);
+  const [returnReason, setReturnReason] = useState('');
+  const [returnNote, setReturnNote] = useState('');
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnDone, setReturnDone] = useState(!!returnRequested);
+  const [returnStatus, setReturnStatus] = useState(initReturnStatus || 'none');
+
+  const fetchTracking = () => {
+    if (!consignmentId || !orderId) return;
+    setTrackingLoading(true);
+    setTrackingError(null);
+    fetchDataFromApi(`/api/order/${orderId}/pathao-tracking`).then((res) => {
+      setTrackingLoading(false);
+      if (res?.success) setTracking(res);
+      else setTrackingError(res?.message || 'Live tracking temporarily unavailable.');
+    }).catch(() => {
+      setTrackingLoading(false);
+      setTrackingError('Live tracking temporarily unavailable.');
+    });
+  };
+
+  useEffect(() => { if (consignmentId && orderId) fetchTracking(); }, [consignmentId, orderId]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(consignmentId).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const submitReturn = () => {
+    if (!returnReason) return;
+    setReturnSubmitting(true);
+    postData(`/api/order/${orderId}/return-request`, { returnReason, returnNote }).then((res) => {
+      setReturnSubmitting(false);
+      if (res?.success) { setReturnDone(true); setReturnStatus('pending'); setShowReturnForm(false); }
     });
   };
 
@@ -36,53 +78,135 @@ const PathaoTrackingCard = ({ consignmentId }) => {
     </div>
   );
 
+  const isEligibleForReturn = orderStatus === 'delivered' && !returnDone && !showReturnForm;
+  const returnStatusLabel = {
+    pending: 'Return request pending. Our team will review it and contact you soon.',
+    approved: '✓ Return approved. Our team will be in touch.',
+    rejected: 'Return request was not approved. Please contact us for more info.',
+    completed: '✓ Return completed.',
+  }[returnStatus];
+
   return (
     <div className="mt-4 mb-2 rounded-xl border border-[rgba(0,0,0,0.1)] bg-[#f0faf4] overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 bg-[#1a8c4e] text-white">
-        <span className="text-[15px]">🚚</span>
+        <span>🚚</span>
         <span className="font-[600] text-[14px]">Track your Pathao Nepal delivery</span>
       </div>
+
       <div className="px-4 py-4">
-        <p className="text-[13px] text-gray-600 mb-3">
-          Your parcel has been sent through Pathao Nepal.
-        </p>
-        <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <p className="text-[13px] text-gray-600 mb-3">Your parcel has been sent through Pathao Nepal.</p>
+
+        <div className="flex items-center gap-2 mb-2 flex-wrap">
           <span className="text-[13px] text-gray-500 font-[500]">Tracking ID:</span>
-          <span className="font-mono font-[700] text-[15px] text-[#1a8c4e] tracking-wide bg-white px-3 py-1 rounded-md border border-[#c3e6cb]">
+          <span className="font-mono font-[700] text-[15px] text-[#1a8c4e] bg-white px-3 py-1 rounded-md border border-[#c3e6cb]">
             {consignmentId}
           </span>
         </div>
+
         <p className="text-[12px] text-gray-500 mb-4">
-          Copy this Tracking ID and use it in the Pathao app or Pathao Nepal tracking page if available.
+          Live tracking status is shown below when available. You can also copy this Tracking ID for support.
         </p>
-        <p className="text-[12px] text-gray-400 mb-4">
-          Tracking status may show: <span className="font-[500]">Request Accepted</span> · <span className="font-[500]">In Transit</span> · <span className="font-[500]">Delivered</span>
-        </p>
+
+        {/* Live Status */}
+        {trackingLoading && (
+          <div className="flex items-center gap-2 text-[13px] text-gray-500 mb-3">
+            <CircularProgress size={14} /> Fetching live status...
+          </div>
+        )}
+
+        {!trackingLoading && tracking?.success && (
+          <div className="bg-white rounded-lg border border-[#c3e6cb] p-3 mb-4">
+            {tracking.status && (
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[12px] text-gray-500 font-[500]">Current Status:</span>
+                <span className="text-[13px] font-[600] text-[#1a8c4e]">{tracking.status}</span>
+              </div>
+            )}
+            {tracking.lastUpdated && (
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] text-gray-500 font-[500]">Last Updated:</span>
+                <span className="text-[12px] text-gray-600">{new Date(tracking.lastUpdated).toLocaleString()}</span>
+              </div>
+            )}
+            {tracking.history?.length > 0 && (
+              <div className="mt-3 space-y-1">
+                <p className="text-[11px] font-[600] text-gray-500 uppercase tracking-wide mb-1">History</p>
+                {tracking.history.map((h, i) => (
+                  <div key={i} className="text-[12px] text-gray-600 border-l-2 border-[#1a8c4e] pl-2">
+                    {h.status || h.message || JSON.stringify(h)}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {!trackingLoading && trackingError && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4 text-[12px] text-yellow-700">
+            {trackingError} Please contact us with your Tracking ID for assistance.
+          </div>
+        )}
+
+        {/* Action Buttons */}
         <div className="flex gap-2 flex-wrap">
-          <Button
-            size="small"
-            variant="outlined"
+          <Button size="small" variant="outlined"
             className="!border-[#1a8c4e] !text-[#1a8c4e] !capitalize !text-[12px] !font-[600]"
-            startIcon={<MdContentCopy />}
-            onClick={handleCopy}
-          >
+            startIcon={<MdContentCopy />} onClick={handleCopy}>
             {copied ? 'Copied!' : 'Copy Tracking ID'}
           </Button>
-          <a
-            href={PATHAO_TRACKING_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Button
-              size="small"
-              variant="contained"
-              className="!bg-[#1a8c4e] !text-white !capitalize !text-[12px] !font-[600]"
-              startIcon={<MdOpenInNew />}
-            >
-              Open Pathao Nepal
-            </Button>
-          </a>
+          <Button size="small" variant="outlined"
+            className="!border-[#1a8c4e] !text-[#1a8c4e] !capitalize !text-[12px] !font-[600]"
+            onClick={fetchTracking} disabled={trackingLoading}>
+            {trackingLoading ? 'Refreshing...' : 'Refresh Status'}
+          </Button>
         </div>
+
+        {/* Return Request */}
+        {isEligibleForReturn && (
+          <div className="mt-4 pt-4 border-t border-[rgba(0,0,0,0.08)]">
+            <Button size="small" variant="outlined" color="error"
+              className="!capitalize !text-[12px] !font-[600]"
+              onClick={() => setShowReturnForm(true)}>
+              Request Return
+            </Button>
+          </div>
+        )}
+
+        {returnDone && returnStatusLabel && (
+          <div className="mt-4 pt-4 border-t border-[rgba(0,0,0,0.08)]">
+            <p className={`text-[12px] font-[500] ${returnStatus === 'rejected' ? 'text-red-600' : 'text-orange-600'}`}>
+              {returnStatusLabel}
+            </p>
+          </div>
+        )}
+
+        {showReturnForm && (
+          <div className="mt-4 pt-4 border-t border-[rgba(0,0,0,0.08)]">
+            <p className="text-[13px] font-[600] text-gray-700 mb-3">Return Request</p>
+            <select
+              className="w-full border border-gray-300 rounded-md p-2 text-[13px] mb-3 bg-white"
+              value={returnReason}
+              onChange={(e) => setReturnReason(e.target.value)}>
+              <option value="">Select a reason...</option>
+              {RETURN_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+            <textarea
+              className="w-full border border-gray-300 rounded-md p-2 text-[13px] resize-none mb-3"
+              rows={3} placeholder="Additional notes (optional)"
+              value={returnNote} onChange={(e) => setReturnNote(e.target.value)} />
+            <div className="flex gap-2">
+              <Button size="small" variant="contained" color="error"
+                className="!capitalize !text-[12px] !font-[600]"
+                disabled={!returnReason || returnSubmitting} onClick={submitReturn}>
+                {returnSubmitting ? 'Submitting...' : 'Submit Return Request'}
+              </Button>
+              <Button size="small" variant="text" className="!capitalize !text-[12px]"
+                onClick={() => setShowReturnForm(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -207,7 +331,13 @@ const Orders = () => {
                             {isOpenOrderdProduct === index && (
                               <tr>
                                 <td className="px-6 pb-4" colSpan="7">
-                                  <PathaoTrackingCard consignmentId={order?.pathaoConsignmentId} />
+                                  <PathaoTrackingCard
+                                    consignmentId={order?.pathaoConsignmentId}
+                                    orderId={order?._id}
+                                    orderStatus={order?.order_status}
+                                    returnRequested={order?.returnRequested}
+                                    returnStatus={order?.returnStatus}
+                                  />
                                   <div className="relative overflow-x-auto">
                                     <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                                       <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">

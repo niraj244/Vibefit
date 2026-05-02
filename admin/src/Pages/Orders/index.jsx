@@ -11,6 +11,7 @@ import { formatPrice } from '../../utils/currency';
 import MenuItem from '@mui/material/MenuItem';
 import Select from '@mui/material/Select';
 import { useContext } from 'react';
+import { MdOutlineInventory2 } from "react-icons/md";
 
 import { MyContext } from "../../App.jsx";
 
@@ -26,6 +27,9 @@ export const Orders = () => {
   const [totalOrdersData, setTotalOrdersData] = useState([]);
   const [pathaoInputs, setPathaoInputs] = useState({});
   const [pathaoSaving, setPathaoSaving] = useState({});
+  const [packagingOrders, setPackagingOrders] = useState([]);
+  const [showPackaging, setShowPackaging] = useState(true);
+  const [returnSaving, setReturnSaving] = useState({});
 
   const context = useContext(MyContext);
 
@@ -62,7 +66,6 @@ export const Orders = () => {
       if (res?.error === false) {
         setOrdersData(res?.data)
         context?.setProgress(100);
-        // Initialise pathao inputs from existing data
         const inputs = {};
         res?.data?.forEach(order => {
           inputs[order._id] = order.pathaoConsignmentId || '';
@@ -74,6 +77,9 @@ export const Orders = () => {
       if (res?.error === false) {
         setTotalOrdersData(res)
       }
+    })
+    fetchDataFromApi(`/api/order/needs-packaging`).then((res) => {
+      if (res?.error === false) setPackagingOrders(res?.data || []);
     })
   }, [orderStatus, pageOrder])
 
@@ -129,6 +135,19 @@ export const Orders = () => {
     }
   }
 
+  const saveReturnStatus = (orderId, returnStatus) => {
+    setReturnSaving(prev => ({ ...prev, [orderId]: true }));
+    editData(`/api/order/${orderId}/return-status`, { returnStatus }).then((res) => {
+      setReturnSaving(prev => ({ ...prev, [orderId]: false }));
+      if (res?.data?.error === false || res?.error === false) {
+        context.alertBox("success", "Return status updated!");
+        setOrdersData(prev => prev.map(o => o._id === orderId ? { ...o, returnStatus } : o));
+      } else {
+        context.alertBox("error", "Failed to update return status");
+      }
+    });
+  };
+
   const savePathaoId = (orderId) => {
     setPathaoSaving(prev => ({ ...prev, [orderId]: true }));
     editData(`/api/order/pathao-consignment/${orderId}`, {
@@ -159,6 +178,58 @@ export const Orders = () => {
           />
         </div>
       </div>
+
+      {/* Packages to Prepare Section */}
+      {packagingOrders.length > 0 && (
+        <div className="mx-5 mb-4 rounded-lg border border-orange-200 bg-orange-50 overflow-hidden">
+          <div
+            className="flex items-center justify-between px-4 py-3 cursor-pointer"
+            onClick={() => setShowPackaging(v => !v)}
+          >
+            <div className="flex items-center gap-2">
+              <MdOutlineInventory2 className="text-orange-500 text-[20px]" />
+              <span className="font-[600] text-[14px] text-orange-700">
+                Packages to Prepare for Pathao ({packagingOrders.length})
+              </span>
+              <span className="text-[11px] text-orange-500">— confirmed orders without a Pathao tracking ID</span>
+            </div>
+            {showPackaging ? <FaAngleUp className="text-orange-500" /> : <FaAngleDown className="text-orange-500" />}
+          </div>
+
+          {showPackaging && (
+            <div className="overflow-x-auto border-t border-orange-200">
+              <table className="w-full text-sm text-left text-gray-600">
+                <thead className="text-xs uppercase bg-orange-100 text-orange-700">
+                  <tr>
+                    <th className="px-4 py-2 whitespace-nowrap">Order ID</th>
+                    <th className="px-4 py-2 whitespace-nowrap">Customer</th>
+                    <th className="px-4 py-2 whitespace-nowrap">Address</th>
+                    <th className="px-4 py-2 whitespace-nowrap">Payment</th>
+                    <th className="px-4 py-2 whitespace-nowrap">Total</th>
+                    <th className="px-4 py-2 whitespace-nowrap">Status</th>
+                    <th className="px-4 py-2 whitespace-nowrap">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {packagingOrders.map((o) => (
+                    <tr key={o._id} className="border-t border-orange-100 bg-white hover:bg-orange-50 transition-all">
+                      <td className="px-4 py-2 font-mono text-[12px] text-primary">{o._id}</td>
+                      <td className="px-4 py-2 whitespace-nowrap font-[500]">{o?.userId?.name}</td>
+                      <td className="px-4 py-2 text-[12px] max-w-[220px]">
+                        {[o?.delivery_address?.address_line1, o?.delivery_address?.city, o?.delivery_address?.state].filter(Boolean).join(', ')}
+                      </td>
+                      <td className="px-4 py-2 text-[12px]">{o?.paymentId ? 'Paid' : 'COD'}</td>
+                      <td className="px-4 py-2 whitespace-nowrap font-[500]">{formatPrice(o?.totalAmt)}</td>
+                      <td className="px-4 py-2"><Badge status={o?.order_status} /></td>
+                      <td className="px-4 py-2 whitespace-nowrap text-[12px]">{o?.createdAt?.split('T')[0]}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="relative overflow-x-auto">
         <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
@@ -284,6 +355,11 @@ export const Orders = () => {
                       </td>
                       <td className="px-6 py-4 font-[500] whitespace-nowrap">
                         {order?.createdAt?.split("T")[0]}
+                        {order?.returnRequested && (
+                          <span className="block mt-1 text-[10px] font-[600] text-red-600 bg-red-100 px-2 py-0.5 rounded-full w-fit">
+                            Return Requested
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 font-[500] whitespace-nowrap">
                         <Button onClick={() => deleteOrder(order?._id)} variant="outlined" color="error" size="small">Delete</Button>
@@ -293,6 +369,33 @@ export const Orders = () => {
                     {isOpenOrderdProduct === index && (
                       <tr>
                         <td className="pl-20" colSpan="13">
+                          {/* Return Request Panel */}
+                          {order?.returnRequested && (
+                            <div className="flex items-start gap-4 my-4 p-4 bg-red-50 rounded-lg border border-red-200 flex-wrap">
+                              <div className="flex-1 min-w-[200px]">
+                                <p className="text-[13px] font-[600] text-red-700 mb-1">🔄 Return Request</p>
+                                <p className="text-[12px] text-gray-600"><span className="font-[500]">Reason:</span> {order?.returnReason || '—'}</p>
+                                {order?.returnNote && <p className="text-[12px] text-gray-600"><span className="font-[500]">Note:</span> {order.returnNote}</p>}
+                                <p className="text-[12px] text-gray-500 mt-1">Requested: {order?.returnRequestedAt ? new Date(order.returnRequestedAt).toLocaleString() : '—'}</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[12px] font-[500] text-gray-600">Status:</span>
+                                <Select
+                                  size="small"
+                                  value={order?.returnStatus || 'pending'}
+                                  style={{ zoom: '80%', minWidth: 130 }}
+                                  disabled={returnSaving[order._id]}
+                                  onChange={(e) => saveReturnStatus(order._id, e.target.value)}
+                                >
+                                  <MenuItem value="pending">Pending</MenuItem>
+                                  <MenuItem value="approved">Approved</MenuItem>
+                                  <MenuItem value="rejected">Rejected</MenuItem>
+                                  <MenuItem value="completed">Completed</MenuItem>
+                                </Select>
+                              </div>
+                            </div>
+                          )}
+
                           {/* Pathao Consignment ID Input */}
                           <div className="flex items-center gap-3 my-4 p-4 bg-[#f9f9f9] rounded-lg border border-[rgba(0,0,0,0.08)]">
                             <span className="text-[13px] font-[600] whitespace-nowrap text-gray-700">

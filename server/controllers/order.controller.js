@@ -427,6 +427,98 @@ export const updatePathaoConsignmentIdController = async (request, response) => 
 
 
 
+export const getPathaoTrackingController = async (request, response) => {
+    try {
+        const { orderId } = request.params;
+        const order = await OrderModel.findOne({ _id: orderId, userId: request.userId });
+
+        if (!order) {
+            return response.status(404).json({ message: 'Order not found', error: true, success: false });
+        }
+        if (!order.pathaoConsignmentId) {
+            return response.json({ success: false, error: false, message: 'No tracking ID assigned to this order yet.' });
+        }
+
+        const { getPathaoTracking } = await import('../config/pathaoService.js');
+        const data = await getPathaoTracking(order.pathaoConsignmentId);
+
+        if (!data.configured) {
+            return response.json({ success: false, error: false, message: 'Live tracking not yet configured.' });
+        }
+
+        return response.json({
+            success: true,
+            error: false,
+            trackingId: order.pathaoConsignmentId,
+            status: data.order_status || data.status || null,
+            lastUpdated: data.updated_at || data.last_updated || null,
+            history: data.history || data.events || [],
+        });
+    } catch (error) {
+        console.error('[Pathao Tracking]', error.message);
+        return response.json({ success: false, error: false, message: 'Live tracking temporarily unavailable.' });
+    }
+}
+
+export const submitReturnRequestController = async (request, response) => {
+    try {
+        const { orderId } = request.params;
+        const { returnReason, returnNote } = request.body;
+
+        const order = await OrderModel.findOne({ _id: orderId, userId: request.userId });
+        if (!order) {
+            return response.status(404).json({ message: 'Order not found', error: true, success: false });
+        }
+        if (order.order_status !== 'delivered') {
+            return response.status(400).json({ message: 'Only delivered orders are eligible for return.', error: true, success: false });
+        }
+        if (order.returnRequested) {
+            return response.status(400).json({ message: 'A return has already been requested for this order.', error: true, success: false });
+        }
+
+        await OrderModel.updateOne({ _id: orderId }, {
+            returnRequested: true,
+            returnStatus: 'pending',
+            returnReason: returnReason || '',
+            returnNote: returnNote || '',
+            returnRequestedAt: new Date(),
+            returnRequestedBy: String(request.userId),
+        });
+
+        return response.json({ success: true, error: false, message: 'Return request submitted successfully.' });
+    } catch (error) {
+        return response.status(500).json({ message: error.message || error, error: true, success: false });
+    }
+}
+
+export const updateReturnStatusController = async (request, response) => {
+    try {
+        const { orderId } = request.params;
+        const { returnStatus } = request.body;
+        const allowed = ['none', 'pending', 'approved', 'rejected', 'completed'];
+        if (!allowed.includes(returnStatus)) {
+            return response.status(400).json({ message: 'Invalid return status.', error: true, success: false });
+        }
+        await OrderModel.updateOne({ _id: orderId }, { returnStatus });
+        return response.json({ success: true, error: false, message: 'Return status updated.' });
+    } catch (error) {
+        return response.status(500).json({ message: error.message || error, error: true, success: false });
+    }
+}
+
+export const getOrdersNeedingPackagingController = async (request, response) => {
+    try {
+        const orders = await OrderModel.find({
+            order_status: { $in: ['confirm', 'pending'] },
+            $or: [{ pathaoConsignmentId: '' }, { pathaoConsignmentId: { $exists: false } }]
+        }).sort({ createdAt: -1 }).populate('delivery_address userId').limit(50);
+
+        return response.json({ success: true, error: false, data: orders, total: orders.length });
+    } catch (error) {
+        return response.status(500).json({ message: error.message || error, error: true, success: false });
+    }
+}
+
 export const totalSalesController = async (request, response) => {
     try {
         const currentYear = new Date().getFullYear();

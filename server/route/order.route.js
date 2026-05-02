@@ -1,6 +1,6 @@
 import { Router } from "express";
 import auth from "../middlewares/auth.js";
-import {  captureOrderPaypalController, createOrderController, createOrderPaypalController, deleteOrder, esewaFailureController, getOrderDetailsController, getTotalOrdersCountController, getUserOrderDetailsController, initiateEsewaPaymentController, totalSalesController, totalUsersController, updateOrderStatusController, updatePathaoConsignmentIdController, verifyEsewaPaymentController } from "../controllers/order.controller.js";
+import {  captureOrderPaypalController, createOrderController, createOrderPaypalController, deleteOrder, esewaFailureController, getOrderDetailsController, getOrdersNeedingPackagingController, getPathaoTrackingController, getTotalOrdersCountController, getUserOrderDetailsController, initiateEsewaPaymentController, submitReturnRequestController, totalSalesController, totalUsersController, updateOrderStatusController, updatePathaoConsignmentIdController, updateReturnStatusController, verifyEsewaPaymentController } from "../controllers/order.controller.js";
 
 const orderRouter = Router();
 
@@ -15,6 +15,10 @@ orderRouter.get('/users',auth,totalUsersController)
 orderRouter.get('/order-list/orders',auth,getUserOrderDetailsController)
 orderRouter.delete('/deleteOrder/:id',auth,deleteOrder)
 orderRouter.put('/pathao-consignment/:id',auth,updatePathaoConsignmentIdController)
+orderRouter.get('/needs-packaging',auth,getOrdersNeedingPackagingController)
+orderRouter.get('/:orderId/pathao-tracking',auth,getPathaoTrackingController)
+orderRouter.post('/:orderId/return-request',auth,submitReturnRequestController)
+orderRouter.put('/:orderId/return-status',auth,updateReturnStatusController)
 
 // eSewa routes
 orderRouter.post('/initiate-esewa-payment',auth,initiateEsewaPaymentController)

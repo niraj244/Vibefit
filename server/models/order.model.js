@@ -54,6 +54,29 @@ const orderSchema = new mongoose.Schema({
     pathaoConsignmentId: {
         type: String,
         default: ""
+    },
+    returnRequested: {
+        type: Boolean,
+        default: false
+    },
+    returnStatus: {
+        type: String,
+        enum: ['none', 'pending', 'approved', 'rejected', 'completed'],
+        default: 'none'
+    },
+    returnReason: {
+        type: String,
+        default: ""
+    },
+    returnNote: {
+        type: String,
+        default: ""
+    },
+    returnRequestedAt: {
+        type: Date
+    },
+    returnRequestedBy: {
+        type: String
     }
 }, {
     timestamps: true
