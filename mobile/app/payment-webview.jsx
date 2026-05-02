@@ -1,7 +1,9 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+
+// WebView is native-only — lazy import so web bundle doesn't break
+const WebView = Platform.OS !== 'web' ? require('react-native-webview').WebView : null;
 import { Ionicons } from '@expo/vector-icons';
 import { postData, fetchData, BASE_URL } from '../utils/api';
 import { COLORS } from '../utils/colors';
@@ -73,6 +75,16 @@ export default function PaymentWebViewScreen() {
   const activeUrl = method === 'paypal' ? paypalUrl : esewaUrl;
 
   if (loading || !activeUrl) return <Spinner fullScreen />;
+
+  if (!WebView) {
+    return (
+      <View style={styles.container}>
+        <Text style={{ padding: 24, textAlign: 'center' }}>
+          Payment gateway only works on the mobile app. Please use the website to pay via PayPal or eSewa.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
