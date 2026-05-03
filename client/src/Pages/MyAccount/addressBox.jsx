@@ -46,9 +46,8 @@ const AddressBox = (props) => {
                 {
                     props?.address?.address_line1 + " " +
                     props?.address?.city + " " +
-                    props?.address?.country + " " +
-                    props?.address?.state + " " +
-                    props?.address?.pincode
+                    props?.address?.state + ", " +
+                    props?.address?.country
                 }
             </span>
 

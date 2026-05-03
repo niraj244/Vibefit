@@ -12,7 +12,7 @@ const ADDRESS_TYPES = ['Home', 'Office'];
 export default function AddAddressScreen() {
   const router = useRouter();
   const [form, setForm] = useState({
-    address_line1: '', city: '', state: '', pincode: '',
+    address_line1: '', city: '', state: '',
     country: 'Nepal', mobile: '', landmark: '', addressType: 'Home',
   });
   const [loading, setLoading] = useState(false);
@@ -20,8 +20,8 @@ export default function AddAddressScreen() {
   const set = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
 
   const handleSave = async () => {
-    if (!form.address_line1 || !form.city || !form.pincode || !form.mobile) {
-      Alert.alert('Fill required fields', 'Address, city, pincode and mobile are required.');
+    if (!form.address_line1 || !form.city || !form.mobile) {
+      Alert.alert('Fill required fields', 'Address, city and mobile are required.');
       return;
     }
     setLoading(true);
@@ -52,7 +52,6 @@ export default function AddAddressScreen() {
         <Input label="Landmark" value={form.landmark} onChangeText={set('landmark')} placeholder="Near landmark (optional)" />
         <Input label="City *" value={form.city} onChangeText={set('city')} placeholder="City" autoCapitalize="words" />
         <Input label="State / Province" value={form.state} onChangeText={set('state')} placeholder="Province" autoCapitalize="words" />
-        <Input label="Pincode *" value={form.pincode} onChangeText={set('pincode')} placeholder="Postal code" keyboardType="number-pad" />
         <Input label="Mobile *" value={form.mobile} onChangeText={set('mobile')} placeholder="+977-98XXXXXXXX" keyboardType="phone-pad" />
 
         <Text style={styles.typeLabel}>Address Type</Text>

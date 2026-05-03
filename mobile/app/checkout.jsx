@@ -116,7 +116,7 @@ export default function CheckoutScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.addrType}>{addr.addressType} · {addr.mobile}</Text>
                   <Text style={styles.addrLine}>{addr.address_line1}</Text>
-                  <Text style={styles.addrLine}>{addr.city}, {addr.state} {addr.pincode}</Text>
+                  <Text style={styles.addrLine}>{addr.city}, {addr.state}</Text>
                 </View>
               </TouchableOpacity>
             ))}

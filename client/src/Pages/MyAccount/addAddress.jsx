@@ -24,7 +24,6 @@ const AddAddress = () => {
         address_line1: '',
         city: '',
         state: '',
-        pincode: '',
         country: 'Nepal',
         mobile: '',
         userId: '',
@@ -102,12 +101,6 @@ const AddAddress = () => {
         }
 
 
-        if (formFields.pincode === "") {
-            context.alertBox("error", "Please enter your pincode");
-            return false
-        }
-
-
         if (formFields.country === "") {
             context.alertBox("error", "Please enter your country");
             return false
@@ -150,7 +143,6 @@ const AddAddress = () => {
                         address_line1: '',
                         city: '',
                         state: '',
-                        pincode: '',
                         country: 'Nepal',
                         mobile: '',
                         userId: '',
@@ -188,7 +180,6 @@ const AddAddress = () => {
                         address_line1: '',
                         city: '',
                         state: '',
-                        pincode: '',
                         country: 'Nepal',
                         mobile: '',
                         userId: '',
@@ -215,7 +206,6 @@ const AddAddress = () => {
                 address_line1: res?.address?.address_line1,
                 city: res?.address?.city,
                 state: res?.address?.state,
-                pincode: res?.address?.pincode,
                 country: res?.address?.country,
                 mobile: res?.address?.mobile,
                 userId: res?.address?.userId,
@@ -262,16 +252,6 @@ const AddAddress = () => {
                     variant="outlined"
                     size="small"
                     name="state" onChange={onChangeInput} value={formFields.state}
-                />
-            </div>
-
-            <div className="col w-[100%] mb-4">
-                <TextField
-                    className="w-full"
-                    label="Pincode"
-                    variant="outlined"
-                    size="small"
-                    name="pincode" onChange={onChangeInput} value={formFields.pincode}
                 />
             </div>
 

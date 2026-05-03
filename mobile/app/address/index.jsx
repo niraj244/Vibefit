@@ -63,7 +63,7 @@ export default function AddressScreen() {
                 {item.selected && <View style={styles.defaultBadge}><Text style={styles.defaultBadgeText}>Default</Text></View>}
               </View>
               <Text style={styles.addrLine}>{item.address_line1}</Text>
-              <Text style={styles.addrLine}>{item.city}, {item.state} {item.pincode}</Text>
+              <Text style={styles.addrLine}>{item.city}, {item.state}</Text>
               <Text style={styles.addrLine}>{item.mobile}</Text>
             </View>
             <TouchableOpacity onPress={() => handleDelete(item._id)} style={styles.deleteBtn}>

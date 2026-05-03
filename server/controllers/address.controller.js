@@ -4,10 +4,10 @@ import UserModel from "../models/user.model.js";
 export const addAddressController = async (request, response) => {
 
     try {
-        const { address_line1, city, state, pincode, country, mobile, userId, landmark, addressType } = request.body;
+        const { address_line1, city, state, country, mobile, userId, landmark, addressType } = request.body;
 
         const address = new AddressModel({
-            address_line1, city, state, pincode, country, mobile, userId, landmark, addressType
+            address_line1, city, state, country, mobile, userId, landmark, addressType
         })
 
         const savedAddress = await address.save();
@@ -159,7 +159,7 @@ export async function editAddress(request, response) {
 
         const id  = request.params.id;
 
-        const { address_line1, city, state, pincode, country, mobile, userId, landmark, addressType } = request.body;
+        const { address_line1, city, state, country, mobile, userId, landmark, addressType } = request.body;
 
 
         const address = await AddressModel.findByIdAndUpdate(
@@ -168,7 +168,6 @@ export async function editAddress(request, response) {
                 address_line1: address_line1,
                 city: city,
                 state: state,
-                pincode: pincode,
                 country: country,
                 mobile: mobile,
                 landmark: landmark,
