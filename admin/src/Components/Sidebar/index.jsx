@@ -13,6 +13,7 @@ import { Collapse } from "react-collapse";
 import { MyContext } from "../../App";
 import { fetchDataFromApi } from "../../utils/api";
 import { IoLogoBuffer } from "react-icons/io";
+import { RiCoupon3Line } from "react-icons/ri";
 
 
 
@@ -357,6 +358,14 @@ const Sidebar = () => {
 
 
 
+
+          <li>
+            <Link to="/coupons" onClick={() => { context?.windowWidth < 992 && context?.setisSidebarOpen(false); setSubmenuIndex(null); }}>
+              <Button className="w-full !capitalize !justify-start flex gap-3 text-[14px] !text-[rgba(0,0,0,0.8)] !font-[500] items-center !py-2 hover:!bg-[#f1f1f1]">
+                <RiCoupon3Line className="text-[18px]" /> <span>Coupons</span>
+              </Button>
+            </Link>
+          </li>
 
           <li>
             <Link to="/logo/manage">

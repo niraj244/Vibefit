@@ -1,13 +1,23 @@
 import OrderModel from "../models/order.model.js";
 import ProductModel from '../models/product.modal.js';
 import UserModel from '../models/user.model.js';
+import CouponModel from '../models/coupon.model.js';
 import paypal from "@paypal/checkout-server-sdk";
 import OrderConfirmationEmail from "../utils/orderEmailTemplate.js";
 import sendEmailFun from "../config/sendEmail.js";
 import crypto from "crypto";
 
+async function applyCoupon(code, userId) {
+    if (!code) return;
+    await CouponModel.findOneAndUpdate(
+        { code: code.toUpperCase().trim(), isUsed: false },
+        { isUsed: true, usedBy: String(userId), usedAt: new Date() }
+    );
+}
+
 export const createOrderController = async (request, response) => {
     try {
+        const { couponCode, couponDiscount } = request.body;
 
         let order = new OrderModel({
             userId: request.body.userId,
@@ -16,7 +26,9 @@ export const createOrderController = async (request, response) => {
             payment_status: request.body.payment_status,
             delivery_address: request.body.delivery_address,
             totalAmt: request.body.totalAmt,
-            date: request.body.date
+            date: request.body.date,
+            couponCode: couponCode || '',
+            couponDiscount: couponDiscount || 0,
         });
 
         if (!order) {
@@ -27,6 +39,9 @@ export const createOrderController = async (request, response) => {
         }
 
         order = await order.save();
+
+        // Mark coupon as used only after order is saved
+        await applyCoupon(couponCode, request.body.userId);
 
         for (let i = 0; i < request.body.products.length; i++) {
 
@@ -916,7 +931,7 @@ const esewaPendingOrders = new Map();
 // esewa payment
 export const initiateEsewaPaymentController = async (request, response) => {
     try {
-        const { userId, products, totalAmount, delivery_address, date } = request.body;
+        const { userId, products, totalAmount, delivery_address, date, couponCode, couponDiscount } = request.body;
 
         if (!userId || !products || !totalAmount || !delivery_address) {
             return response.status(400).json({
@@ -961,6 +976,8 @@ export const initiateEsewaPaymentController = async (request, response) => {
                 year: "numeric",
             }),
             totalAmount: amount,
+            couponCode: couponCode || '',
+            couponDiscount: couponDiscount || 0,
             createdAt: new Date()
         });
 
@@ -1056,7 +1073,7 @@ export const verifyEsewaPaymentController = async (request, response) => {
         // Check if payment was successful
         if (status === "COMPLETE" || status === "success" || transaction_code) {
             // Payment successful - create order
-            const { userId, products, delivery_address, date, totalAmount } = storedOrderData;
+            const { userId, products, delivery_address, date, totalAmount, couponCode, couponDiscount } = storedOrderData;
 
             // Verify amount matches
             if (parseFloat(total_amount) !== parseFloat(totalAmount)) {
@@ -1074,10 +1091,15 @@ export const verifyEsewaPaymentController = async (request, response) => {
                 payment_status: "COMPLETED",
                 delivery_address: delivery_address,
                 totalAmt: parseFloat(total_amount),
-                date: date
+                date: date,
+                couponCode: couponCode || '',
+                couponDiscount: couponDiscount || 0,
             });
 
             order = await order.save();
+
+            // Mark coupon as used only after order is saved
+            await applyCoupon(couponCode, userId);
 
             // Update product stock
             for (let i = 0; i < products.length; i++) {

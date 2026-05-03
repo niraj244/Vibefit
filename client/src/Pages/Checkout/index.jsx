@@ -22,6 +22,9 @@ const Checkout = () => {
   const [totalAmount, setTotalAmount] = useState();
   const [isLoading, setIsloading] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("esewa"); // paypal, esewa, cod
+  const [couponInput, setCouponInput] = useState('');
+  const [couponData, setCouponData] = useState(null); // { code, type, value, discount, finalAmount }
+  const [couponLoading, setCouponLoading] = useState(false);
   const context = useContext(MyContext);
 
   const history = useNavigate();
@@ -315,6 +318,33 @@ const Checkout = () => {
     }
   }
 
+  const finalAmount = couponData ? couponData.finalAmount : totalAmount;
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setCouponLoading(true);
+    try {
+      const res = await fetchDataFromApi(
+        `/api/coupon/validate?code=${encodeURIComponent(couponInput.trim())}&userId=${context?.userData?._id}&totalAmount=${totalAmount}`
+      );
+      if (res?.valid) {
+        setCouponData(res.coupon);
+        context.alertBox('success', `Coupon applied! You save Rs. ${res.coupon.discount.toLocaleString()}`);
+      } else {
+        setCouponData(null);
+        context.alertBox('error', res?.message || 'Invalid coupon');
+      }
+    } catch {
+      context.alertBox('error', 'Could not validate coupon');
+    }
+    setCouponLoading(false);
+  };
+
+  const removeCoupon = () => {
+    setCouponData(null);
+    setCouponInput('');
+  };
+
   const handleEsewaPayment = async () => {
     if (totalAmount < 1000) {
       context.alertBox("error", "Minimum order amount is Rs. 1,000");
@@ -335,8 +365,10 @@ const Checkout = () => {
     const payload = {
       userId: context?.userData?._id,
       products: context?.cartData,
-      totalAmount: totalAmount,
+      totalAmount: finalAmount,
       delivery_address: selectedAddress,
+      couponCode: couponData?.code || '',
+      couponDiscount: couponData?.discount || 0,
       date: new Date().toLocaleString("en-US", {
         month: "short",
         day: "2-digit",
@@ -399,7 +431,9 @@ const Checkout = () => {
         paymentId: '',
         payment_status: "CASH ON DELIVERY",
         delivery_address: selectedAddress,
-        totalAmt: totalAmount,
+        totalAmt: finalAmount,
+        couponCode: couponData?.code || '',
+        couponDiscount: couponData?.discount || 0,
         date: new Date().toLocaleString("en-US", {
           month: "short",
           day: "2-digit",
@@ -545,6 +579,58 @@ const Checkout = () => {
 
 
 
+              </div>
+
+              {/* Order total summary */}
+              <div className="border-t border-[rgba(0,0,0,0.08)] pt-3 mb-4">
+                <div className="flex justify-between text-[13px] text-[rgba(0,0,0,0.6)] mb-1">
+                  <span>Subtotal</span>
+                  <span>{formatPrice(totalAmount)}</span>
+                </div>
+                {couponData && (
+                  <div className="flex justify-between text-[13px] text-green-600 font-[600] mb-1">
+                    <span>Coupon ({couponData.code})</span>
+                    <span>− {formatPrice(couponData.discount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-[15px] font-[700] border-t border-[rgba(0,0,0,0.08)] pt-2 mt-1">
+                  <span>Total</span>
+                  <span className="text-[#FFA239]">{formatPrice(finalAmount)}</span>
+                </div>
+              </div>
+
+              {/* Coupon input */}
+              <div className="mb-4">
+                <h3 className="text-[14px] font-[600] mb-2">Have a coupon?</h3>
+                {couponData ? (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-3">
+                    <div>
+                      <span className="text-[13px] font-[700] text-green-700">{couponData.code}</span>
+                      <span className="text-[12px] text-green-600 ml-2">
+                        {couponData.type === 'flat' ? `Rs. ${couponData.discount.toLocaleString()} off` : `${couponData.value}% off`}
+                      </span>
+                    </div>
+                    <button onClick={removeCoupon} className="text-[12px] text-red-500 hover:text-red-700 font-[600]">Remove</button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                      placeholder="Enter coupon code"
+                      className="flex-1 border border-[rgba(0,0,0,0.2)] rounded-md px-3 py-2 text-[13px] uppercase focus:outline-none focus:border-[#FFA239]"
+                    />
+                    <button
+                      onClick={handleApplyCoupon}
+                      disabled={couponLoading || !couponInput.trim()}
+                      className="px-4 py-2 bg-[#FFA239] text-white text-[13px] font-[600] rounded-md disabled:opacity-50 hover:bg-[#e8922d]"
+                    >
+                      {couponLoading ? '...' : 'Apply'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="mb-4">

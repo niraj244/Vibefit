@@ -24,6 +24,31 @@ export default function CheckoutScreen() {
   const [payMethod, setPayMethod] = useState('cod');
   const [loading, setLoading] = useState(true);
   const [placing, setPlacing] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponData, setCouponData] = useState(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+
+  const finalTotal = couponData ? couponData.finalAmount : cartTotal;
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setCouponLoading(true);
+    try {
+      const res = await fetchData(
+        `/api/coupon/validate?code=${encodeURIComponent(couponInput.trim().toUpperCase())}&userId=${userData?._id}&totalAmount=${cartTotal}`
+      );
+      if (res?.valid) {
+        setCouponData(res.coupon);
+        Alert.alert('Coupon Applied!', `You save Rs. ${res.coupon.discount.toLocaleString()}`);
+      } else {
+        setCouponData(null);
+        Alert.alert('Invalid Coupon', res?.message || 'Coupon not valid');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not validate coupon');
+    }
+    setCouponLoading(false);
+  };
 
   useEffect(() => {
     fetchData('/api/address/get').then((res) => {
@@ -40,11 +65,11 @@ export default function CheckoutScreen() {
     if (cartData.length === 0) { Alert.alert('Cart empty'); return; }
 
     if (payMethod === 'paypal') {
-      router.push({ pathname: '/payment-webview', params: { method: 'paypal', total: cartTotal, addressId: selectedAddr._id } });
+      router.push({ pathname: '/payment-webview', params: { method: 'paypal', total: finalTotal, addressId: selectedAddr._id } });
       return;
     }
     if (payMethod === 'esewa') {
-      router.push({ pathname: '/payment-webview', params: { method: 'esewa', total: cartTotal, addressId: selectedAddr._id } });
+      router.push({ pathname: '/payment-webview', params: { method: 'esewa', total: finalTotal, addressId: selectedAddr._id, couponCode: couponData?.code || '', couponDiscount: couponData?.discount || 0 } });
       return;
     }
 
@@ -64,7 +89,9 @@ export default function CheckoutScreen() {
           countInStock: item.countInStock,
           discount: item.discount || 0,
         })),
-        totalAmt: cartTotal,
+        totalAmt: finalTotal,
+        couponCode: couponData?.code || '',
+        couponDiscount: couponData?.discount || 0,
         delivery_address: selectedAddr._id,
         paymentId: `COD_${Date.now()}`,
         payment_status: 'pending',
@@ -158,11 +185,58 @@ export default function CheckoutScreen() {
             </View>
           ))}
           <View style={styles.divider} />
+          {couponData && (
+            <>
+              <View style={styles.totalRow}>
+                <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Subtotal</Text>
+                <Text style={{ fontSize: 13, color: COLORS.textMuted }}>Rs. {cartTotal.toLocaleString()}</Text>
+              </View>
+              <View style={[styles.totalRow, { marginTop: 4 }]}>
+                <Text style={{ fontSize: 13, color: '#16a34a', fontWeight: '700' }}>Coupon ({couponData.code})</Text>
+                <Text style={{ fontSize: 13, color: '#16a34a', fontWeight: '700' }}>− Rs. {couponData.discount.toLocaleString()}</Text>
+              </View>
+              <View style={styles.divider} />
+            </>
+          )}
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>Rs. {cartTotal.toLocaleString()}</Text>
+            <Text style={styles.totalValue}>Rs. {finalTotal.toLocaleString()}</Text>
           </View>
         </View>
+
+        {/* Coupon */}
+        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>Have a Coupon?</Text>
+        {couponData ? (
+          <View style={styles.couponApplied}>
+            <View>
+              <Text style={styles.couponCode}>{couponData.code}</Text>
+              <Text style={styles.couponSaving}>
+                {couponData.type === 'flat' ? `Rs. ${couponData.discount.toLocaleString()} off` : `${couponData.value}% off`}
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => { setCouponData(null); setCouponInput(''); }}>
+              <Text style={styles.couponRemove}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.couponRow}>
+            <TextInput
+              style={styles.couponInput}
+              value={couponInput}
+              onChangeText={(t) => setCouponInput(t.toUpperCase())}
+              placeholder="Enter coupon code"
+              placeholderTextColor={COLORS.textMuted}
+              autoCapitalize="characters"
+            />
+            <TouchableOpacity
+              style={[styles.couponBtn, (!couponInput.trim() || couponLoading) && { opacity: 0.5 }]}
+              onPress={handleApplyCoupon}
+              disabled={!couponInput.trim() || couponLoading}
+            >
+              <Text style={styles.couponBtnText}>{couponLoading ? '...' : 'Apply'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       {cartTotal < 1000 && (
@@ -173,7 +247,7 @@ export default function CheckoutScreen() {
       <View style={styles.footer}>
         <View>
           <Text style={styles.footerLabel}>Total Amount</Text>
-          <Text style={styles.footerTotal}>Rs. {cartTotal.toLocaleString()}</Text>
+          <Text style={styles.footerTotal}>Rs. {finalTotal.toLocaleString()}</Text>
         </View>
         <Button title={placing ? 'Placing...' : `Place Order`} onPress={handlePlaceOrder} loading={placing} style={styles.placeBtn} disabled={cartTotal < 1000} />
       </View>
@@ -210,6 +284,14 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between' },
   totalLabel: { fontSize: 15, fontWeight: '700', color: COLORS.text },
   totalValue: { fontSize: 15, fontWeight: '700', color: COLORS.primary },
+  couponRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  couponInput: { flex: 1, borderWidth: 1.5, borderColor: COLORS.border, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, color: COLORS.text, backgroundColor: '#fff', letterSpacing: 1 },
+  couponBtn: { backgroundColor: COLORS.primary, borderRadius: 10, paddingHorizontal: 16, justifyContent: 'center' },
+  couponBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  couponApplied: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#f0fdf4', borderWidth: 1.5, borderColor: '#86efac', borderRadius: 10, padding: 12, marginBottom: 8 },
+  couponCode: { fontSize: 14, fontWeight: '800', color: '#166534', letterSpacing: 1 },
+  couponSaving: { fontSize: 12, color: '#16a34a', marginTop: 2 },
+  couponRemove: { fontSize: 13, color: '#ef4444', fontWeight: '700' },
   minOrderBanner: { backgroundColor: '#fef2f2', borderTopWidth: 1, borderTopColor: '#fecaca', paddingHorizontal: 16, paddingVertical: 8 },
   minOrderText: { fontSize: 12, color: '#dc2626', textAlign: 'center', fontWeight: '600' },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: COLORS.border },
