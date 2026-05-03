@@ -316,6 +316,10 @@ const Checkout = () => {
   }
 
   const handleEsewaPayment = async () => {
+    if (totalAmount < 1000) {
+      context.alertBox("error", "Minimum order amount is Rs. 1,000");
+      return;
+    }
     if (userData?.address_details?.length === 0) {
       context.alertBox("error", "Please add address");
       return;
@@ -380,6 +384,10 @@ const Checkout = () => {
 
 
   const cashOnDelivery = () => {
+    if (totalAmount < 1000) {
+      context.alertBox("error", "Minimum order amount is Rs. 1,000");
+      return;
+    }
 
     const user = context?.userData
     setIsloading(true);
@@ -581,6 +589,12 @@ const Checkout = () => {
                 </div>
               </div>
 
+              {totalAmount < 1000 && (
+                <p className="text-red-500 text-[13px] text-center bg-red-50 border border-red-200 rounded-md p-2 mb-2">
+                  Minimum order amount is <strong>Rs. 1,000</strong>. Add more items to proceed.
+                </p>
+              )}
+
               <div className="flex items-center flex-col gap-3 mb-2">
                 {/* PayPal button — hidden for now, uncomment to re-enable
                 {selectedPaymentMethod === 'paypal' && (
@@ -604,7 +618,7 @@ const Checkout = () => {
                     type="button" 
                     className="btn-org btn-lg w-full flex gap-2 items-center" 
                     onClick={handleEsewaPayment}
-                    disabled={userData?.address_details?.length === 0 || isLoading}
+                    disabled={userData?.address_details?.length === 0 || isLoading || totalAmount < 1000}
                   >
                     {isLoading ? <CircularProgress size={20} /> : (
                       <>
@@ -620,7 +634,7 @@ const Checkout = () => {
                     type="button" 
                     className="btn-dark btn-lg w-full flex gap-2 items-center" 
                     onClick={cashOnDelivery}
-                    disabled={userData?.address_details?.length === 0 || isLoading}
+                    disabled={userData?.address_details?.length === 0 || isLoading || totalAmount < 1000}
                   >
                     {isLoading ? <CircularProgress size={20} /> : (
                       <>

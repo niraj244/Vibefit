@@ -35,6 +35,7 @@ export default function CheckoutScreen() {
   }, []);
 
   const handlePlaceOrder = async () => {
+    if (cartTotal < 1000) { Alert.alert('Minimum Order', 'Minimum order amount is Rs. 1,000. Add more items to proceed.'); return; }
     if (!selectedAddr) { Alert.alert('Select an address', 'Please select a delivery address.'); return; }
     if (cartData.length === 0) { Alert.alert('Cart empty'); return; }
 
@@ -164,12 +165,17 @@ export default function CheckoutScreen() {
         </View>
       </ScrollView>
 
+      {cartTotal < 1000 && (
+        <View style={styles.minOrderBanner}>
+          <Text style={styles.minOrderText}>Minimum order: Rs. 1,000 (Rs. {(1000 - cartTotal).toLocaleString()} more needed)</Text>
+        </View>
+      )}
       <View style={styles.footer}>
         <View>
           <Text style={styles.footerLabel}>Total Amount</Text>
           <Text style={styles.footerTotal}>Rs. {cartTotal.toLocaleString()}</Text>
         </View>
-        <Button title={placing ? 'Placing...' : `Place Order`} onPress={handlePlaceOrder} loading={placing} style={styles.placeBtn} />
+        <Button title={placing ? 'Placing...' : `Place Order`} onPress={handlePlaceOrder} loading={placing} style={styles.placeBtn} disabled={cartTotal < 1000} />
       </View>
     </View>
   );
@@ -204,6 +210,8 @@ const styles = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'space-between' },
   totalLabel: { fontSize: 15, fontWeight: '700', color: COLORS.text },
   totalValue: { fontSize: 15, fontWeight: '700', color: COLORS.primary },
+  minOrderBanner: { backgroundColor: '#fef2f2', borderTopWidth: 1, borderTopColor: '#fecaca', paddingHorizontal: 16, paddingVertical: 8 },
+  minOrderText: { fontSize: 12, color: '#dc2626', textAlign: 'center', fontWeight: '600' },
   footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: COLORS.border },
   footerLabel: { fontSize: 12, color: COLORS.textMuted },
   footerTotal: { fontSize: 20, fontWeight: '800', color: COLORS.primary },
