@@ -21,7 +21,7 @@ const Checkout = () => {
   const [selectedAddress, setSelectedAddress] = useState("");
   const [totalAmount, setTotalAmount] = useState();
   const [isLoading, setIsloading] = useState(false);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("paypal"); // paypal, esewa, cod
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("esewa"); // paypal, esewa, cod
   const context = useContext(MyContext);
 
   const history = useNavigate();
@@ -542,6 +542,7 @@ const Checkout = () => {
               <div className="mb-4">
                 <h3 className="text-[16px] font-[600] mb-3">Select Payment Method</h3>
                 <div className="flex flex-col gap-3">
+                  {/* PayPal option — hidden for now, uncomment to re-enable
                   <label className={`flex items-center gap-3 p-3 border-2 rounded-md cursor-pointer ${selectedPaymentMethod === 'paypal' ? 'border-[#FFA239] bg-[#fff8f0]' : 'border-[rgba(0,0,0,0.1)]'}`}>
                     <Radio
                       checked={selectedPaymentMethod === 'paypal'}
@@ -553,7 +554,7 @@ const Checkout = () => {
                       <p className="text-[12px] text-gray-500 mt-1">Pay securely with PayPal</p>
                     </div>
                   </label>
-
+                  */}
                   <label className={`flex items-center gap-3 p-3 border-2 rounded-md cursor-pointer ${selectedPaymentMethod === 'esewa' ? 'border-[#FFA239] bg-[#fff8f0]' : 'border-[rgba(0,0,0,0.1)]'}`}>
                     <Radio
                       checked={selectedPaymentMethod === 'esewa'}
@@ -581,6 +582,7 @@ const Checkout = () => {
               </div>
 
               <div className="flex items-center flex-col gap-3 mb-2">
+                {/* PayPal button — hidden for now, uncomment to re-enable
                 {selectedPaymentMethod === 'paypal' && (
                   <div id="paypal-button-container" className="w-full min-h-[50px]">
                     {!VITE_APP_PAYPAL_CLIENT_ID && (
@@ -595,6 +597,7 @@ const Checkout = () => {
                     )}
                   </div>
                 )}
+                */}
 
                 {selectedPaymentMethod === 'esewa' && (
                   <Button 
