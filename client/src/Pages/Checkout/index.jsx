@@ -327,12 +327,15 @@ const Checkout = () => {
       const res = await fetchDataFromApi(
         `/api/coupon/validate?code=${encodeURIComponent(couponInput.trim())}&userId=${context?.userData?._id}&totalAmount=${totalAmount}`
       );
-      if (res?.valid) {
-        setCouponData(res.coupon);
-        context.alertBox('success', `Coupon applied! You save Rs. ${res.coupon.discount.toLocaleString()}`);
+      // fetchDataFromApi returns the axios error object on failure (not the server JSON)
+      // The actual server response is at res.response.data when axios throws
+      const data = res?.response?.data || res;
+      if (data?.valid) {
+        setCouponData(data.coupon);
+        context.alertBox('success', `Coupon applied! You save Rs. ${data.coupon.discount.toLocaleString()}`);
       } else {
         setCouponData(null);
-        context.alertBox('error', res?.message || 'Invalid coupon');
+        context.alertBox('error', data?.message || 'Invalid coupon code');
       }
     } catch {
       context.alertBox('error', 'Could not validate coupon');

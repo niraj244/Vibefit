@@ -10,7 +10,7 @@ import {
 
 const couponRouter = express.Router();
 
-couponRouter.get('/validate', auth, validateCouponController);
+couponRouter.get('/validate', validateCouponController);
 couponRouter.post('/create', auth, createCouponController);
 couponRouter.get('/list', auth, listCouponsController);
 couponRouter.delete('/:id', auth, deleteCouponController);
