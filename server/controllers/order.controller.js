@@ -48,7 +48,7 @@ async function handleFirstOrderReferral(userId, amountPaid) {
     const user = await UserModel.findById(userId);
     if (!user || user.hasCompletedFirstOrder || !user.referredBy) return;
 
-    await UserModel.findByIdAndUpdate(userId, { hasCompletedFirstOrder: true, $inc: { points: 500 } });
+    await UserModel.findByIdAndUpdate(userId, { $set: { hasCompletedFirstOrder: true }, $inc: { points: 500 } });
     await PointsModel.create({
         userId: String(userId),
         type: 'referral_friend',
@@ -455,7 +455,7 @@ export const updateOrderStatusController = async (request, response) => {
             if (order) {
                 await OrderModel.updateOne({ _id: id }, { pointsAwarded: true });
                 await awardOrderPoints(order.userId, order.totalAmt, order._id);
-                handleFirstOrderReferral(order.userId, order.totalAmt).catch(() => {});
+                handleFirstOrderReferral(order.userId, order.totalAmt).catch((e) => console.error('[Referral]', e.message));
             }
         }
 
