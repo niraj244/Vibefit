@@ -20,6 +20,7 @@ import { IoMdHeartEmpty } from "react-icons/io";
 import { IoIosLogOut } from "react-icons/io";
 import { fetchDataFromApi } from "../../utils/api";
 import { LuMapPin } from "react-icons/lu";
+import { RiCoinLine } from "react-icons/ri";
 import { useEffect } from "react";
 import { HiOutlineMenu } from "react-icons/hi";
 
@@ -262,6 +263,15 @@ const Header = () => {
                             >
                               <IoMdHeartEmpty className="text-[18px]" />{" "}
                               <span className="text-[14px]">My List</span>
+                            </MenuItem>
+                          </Link>
+                          <Link to="/my-points" className="w-full block">
+                            <MenuItem
+                              onClick={handleClose}
+                              className="flex gap-2 ! !py-2"
+                            >
+                              <RiCoinLine className="text-[18px]" />{" "}
+                              <span className="text-[14px]">Points & Referral</span>
                             </MenuItem>
                           </Link>
 
