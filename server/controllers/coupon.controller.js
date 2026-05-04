@@ -1,5 +1,7 @@
 import CouponModel from "../models/coupon.model.js";
 import UserModel from "../models/user.model.js";
+import sendEmailFun from "../config/sendEmail.js";
+import CouponEmailTemplate from "../utils/couponEmailTemplate.js";
 
 const SUPER_ADMIN_EMAIL = 'nirajtamang244@gmail.com';
 
@@ -38,6 +40,20 @@ export const createCouponController = async (req, res) => {
         });
 
         await coupon.save();
+
+        // Send email notification to assigned customer
+        if (resolvedEmail) {
+            const user = await UserModel.findOne({ email: resolvedEmail });
+            if (user?.email) {
+                sendEmailFun({
+                    sendTo: [user.email],
+                    subject: `🎁 You've got an exclusive VibeFit coupon — ${coupon.code}`,
+                    text: `Hi ${user.name}, you have a new coupon: ${coupon.code}. Use it at checkout!`,
+                    html: CouponEmailTemplate(user.name, coupon)
+                }).catch(err => console.error('Coupon email error:', err));
+            }
+        }
+
         return res.status(200).json({ error: false, success: true, message: "Coupon created", data: coupon });
     } catch (error) {
         if (error.code === 11000) {
@@ -137,6 +153,22 @@ export const toggleCouponController = async (req, res) => {
         coupon.isActive = !coupon.isActive;
         await coupon.save();
         return res.status(200).json({ error: false, success: true, message: `Coupon ${coupon.isActive ? 'activated' : 'deactivated'}`, data: coupon });
+    } catch (error) {
+        return res.status(500).json({ error: true, success: false, message: error.message });
+    }
+};
+
+// Get coupons assigned to the logged-in user (unused + active)
+export const getMyCouponsController = async (req, res) => {
+    try {
+        const userId = String(req.userId);
+        const coupons = await CouponModel.find({
+            assignedTo: userId,
+            isUsed: false,
+            isActive: true,
+        }).sort({ expiresAt: 1 }); // soonest expiry first
+
+        return res.status(200).json({ error: false, success: true, data: coupons });
     } catch (error) {
         return res.status(500).json({ error: true, success: false, message: error.message });
     }

@@ -25,6 +25,7 @@ const Checkout = () => {
   const [couponInput, setCouponInput] = useState('');
   const [couponData, setCouponData] = useState(null); // { code, type, value, discount, finalAmount }
   const [couponLoading, setCouponLoading] = useState(false);
+  const [myCoupons, setMyCoupons] = useState([]);
   const context = useContext(MyContext);
 
   const history = useNavigate();
@@ -42,6 +43,10 @@ const Checkout = () => {
       window.scrollTo(0, 0);
       setUserData(context?.userData);
       setSelectedAddress(context?.userData?.address_details[0]?._id);
+      fetchDataFromApi('/api/coupon/my-coupons').then((res) => {
+        const data = res?.response?.data || res;
+        setMyCoupons(data?.data || []);
+      });
     }
   }, [context?.userData, context.isLogin])
 
@@ -348,6 +353,31 @@ const Checkout = () => {
     setCouponInput('');
   };
 
+  const selectCoupon = async (code) => {
+    setCouponLoading(true);
+    const res = await fetchDataFromApi(
+      `/api/coupon/validate?code=${encodeURIComponent(code)}&userId=${context?.userData?._id}&totalAmount=${totalAmount}`
+    );
+    const data = res?.response?.data || res;
+    if (data?.valid) {
+      setCouponData(data.coupon);
+      setCouponInput(code);
+    } else {
+      context.alertBox('error', data?.message || 'Could not apply coupon');
+    }
+    setCouponLoading(false);
+  };
+
+  const formatExpiry = (date) => {
+    if (!date) return null;
+    return new Date(date).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+  };
+
+  const isExpiringSoon = (date) => {
+    if (!date) return false;
+    return (new Date(date) - new Date()) < 3 * 24 * 60 * 60 * 1000; // within 3 days
+  };
+
   const handleEsewaPayment = async () => {
     if (totalAmount < 1000) {
       context.alertBox("error", "Minimum order amount is Rs. 1,000");
@@ -602,36 +632,94 @@ const Checkout = () => {
                 </div>
               </div>
 
-              {/* Coupon input */}
+              {/* Coupon section */}
               <div className="mb-4">
-                <h3 className="text-[14px] font-[600] mb-2">Have a coupon?</h3>
-                {couponData ? (
-                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-3">
-                    <div>
-                      <span className="text-[13px] font-[700] text-green-700">{couponData.code}</span>
-                      <span className="text-[12px] text-green-600 ml-2">
-                        {couponData.type === 'flat' ? `Rs. ${couponData.discount.toLocaleString()} off` : `${couponData.value}% off`}
-                      </span>
+                <h3 className="text-[14px] font-[600] mb-2">Coupons & Offers</h3>
+
+                {/* Applied coupon banner */}
+                {couponData && (
+                  <div className="flex items-center justify-between bg-green-50 border border-green-200 rounded-md p-3 mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-600 text-[18px]">🎉</span>
+                      <div>
+                        <span className="text-[13px] font-[700] text-green-700">{couponData.code}</span>
+                        <span className="text-[12px] text-green-600 ml-2">
+                          {couponData.type === 'flat' ? `Rs. ${couponData.discount.toLocaleString()} off applied` : `${couponData.value}% off applied`}
+                        </span>
+                      </div>
                     </div>
                     <button onClick={removeCoupon} className="text-[12px] text-red-500 hover:text-red-700 font-[600]">Remove</button>
                   </div>
-                ) : (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={couponInput}
-                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                      onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
-                      placeholder="Enter coupon code"
-                      className="flex-1 border border-[rgba(0,0,0,0.2)] rounded-md px-3 py-2 text-[13px] uppercase focus:outline-none focus:border-[#FFA239]"
-                    />
-                    <button
-                      onClick={handleApplyCoupon}
-                      disabled={couponLoading || !couponInput.trim()}
-                      className="px-4 py-2 bg-[#FFA239] text-white text-[13px] font-[600] rounded-md disabled:opacity-50 hover:bg-[#e8922d]"
-                    >
-                      {couponLoading ? '...' : 'Apply'}
-                    </button>
+                )}
+
+                {/* User's assigned coupons */}
+                {myCoupons.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-[12px] text-[rgba(0,0,0,0.5)] mb-2">Your available coupons:</p>
+                    <div className="flex flex-col gap-2">
+                      {myCoupons.map((c) => {
+                        const isSelected = couponData?.code === c.code;
+                        const expiring = isExpiringSoon(c.expiresAt);
+                        return (
+                          <div
+                            key={c._id}
+                            onClick={() => !isSelected && !couponLoading && selectCoupon(c.code)}
+                            className={`flex items-center justify-between border-2 rounded-md p-3 cursor-pointer transition-all
+                              ${isSelected ? 'border-[#FFA239] bg-[#fff8f0]' : 'border-dashed border-[rgba(0,0,0,0.15)] hover:border-[#FFA239] hover:bg-[#fff8f0]'}`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-[40px] h-[40px] rounded-md flex items-center justify-center text-white text-[11px] font-[800] text-center leading-tight
+                                ${isSelected ? 'bg-[#FFA239]' : 'bg-[rgba(255,162,57,0.15)]'}`}
+                                style={{ color: isSelected ? '#fff' : '#FFA239' }}
+                              >
+                                {c.type === 'flat' ? `Rs.${c.value}` : `${c.value}%`}
+                              </div>
+                              <div>
+                                <p className="text-[13px] font-[700] text-[#333] tracking-wider">{c.code}</p>
+                                <p className="text-[11px] text-[rgba(0,0,0,0.5)] mt-[1px]">
+                                  {c.type === 'flat' ? `Rs. ${c.value.toLocaleString()} off` : `${c.value}% off`}
+                                  {c.minOrderAmount ? ` · Min. Rs. ${c.minOrderAmount.toLocaleString()}` : ''}
+                                </p>
+                                {c.expiresAt && (
+                                  <p className={`text-[11px] mt-[1px] font-[500] ${expiring ? 'text-red-500' : 'text-[rgba(0,0,0,0.4)]'}`}>
+                                    {expiring ? '⚠ ' : ''}Expires {formatExpiry(c.expiresAt)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            {isSelected ? (
+                              <span className="text-[#FFA239] text-[18px]">✓</span>
+                            ) : (
+                              <span className="text-[12px] text-[#FFA239] font-[600]">Apply</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual code entry */}
+                {!couponData && (
+                  <div>
+                    {myCoupons.length > 0 && <p className="text-[12px] text-[rgba(0,0,0,0.4)] mb-2">Or enter a code manually:</p>}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponInput}
+                        onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                        onKeyDown={(e) => e.key === 'Enter' && handleApplyCoupon()}
+                        placeholder="Enter coupon code"
+                        className="flex-1 border border-[rgba(0,0,0,0.2)] rounded-md px-3 py-2 text-[13px] uppercase focus:outline-none focus:border-[#FFA239]"
+                      />
+                      <button
+                        onClick={handleApplyCoupon}
+                        disabled={couponLoading || !couponInput.trim()}
+                        className="px-4 py-2 bg-[#FFA239] text-white text-[13px] font-[600] rounded-md disabled:opacity-50 hover:bg-[#e8922d]"
+                      >
+                        {couponLoading ? '...' : 'Apply'}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
