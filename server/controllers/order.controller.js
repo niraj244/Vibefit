@@ -44,7 +44,7 @@ async function awardOrderPoints(userId, amountPaid, orderId) {
 }
 
 async function handleFirstOrderReferral(userId, amountPaid) {
-    if (amountPaid < 50) return;
+    if (amountPaid < 1000) return;
     const user = await UserModel.findById(userId);
     if (!user || user.hasCompletedFirstOrder || !user.referredBy) return;
 

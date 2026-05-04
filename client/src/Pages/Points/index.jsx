@@ -83,7 +83,7 @@ const Points = () => {
           <div className="card bg-white shadow-md rounded-md p-6">
             <h2 className="text-[18px] font-[700] mb-1">Refer & Earn</h2>
             <p className="text-[13px] text-[rgba(0,0,0,0.5)] mb-4">
-              Share your referral code. When your friend makes their first purchase (Rs. 50+), you both earn bonus points — they get 500 pts, you get 1,000 pts!
+              Share your referral code. When your friend makes their first purchase of Rs. 1,000+, you both earn bonus points — they get 500 pts, you get 1,000 pts!
             </p>
             <div className="flex flex-col sm:flex-row gap-3 mb-3">
               <div className="flex-1 bg-[#fff8f0] border-2 border-dashed border-[#FFA239] rounded-xl p-4 flex flex-col items-center gap-2">
@@ -103,7 +103,7 @@ const Points = () => {
                   <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-[18px] font-[700]">F</div>
                   <div>
                     <p className="text-[13px] font-[600]">Your Friend gets</p>
-                    <p className="text-[12px] text-[rgba(0,0,0,0.5)]">500 points (= Rs. 50) on first purchase</p>
+                    <p className="text-[12px] text-[rgba(0,0,0,0.5)]">500 points (= Rs. 50) on first Rs. 1,000+ purchase</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">

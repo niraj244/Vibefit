@@ -743,14 +743,14 @@ const Checkout = () => {
                 )}
               </div>
 
-              {/* Points redemption section */}
-              {userPoints > 0 && (
+              {/* Points redemption section — minimum 500 points to redeem */}
+              {userPoints >= 500 && (
                 <div className="mb-4 border border-[rgba(0,0,0,0.08)] rounded-md p-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-[14px] font-[600]">Use Points</h3>
                       <p className="text-[12px] text-[rgba(0,0,0,0.5)] mt-0.5">
-                        {userPoints.toLocaleString()} pts available = Rs. {(userPoints * 0.1).toFixed(0)} off
+                        {userPoints.toLocaleString()} pts available = Rs. {(userPoints * 0.1).toFixed(0)} off (min. 500 pts to redeem)
                       </p>
                     </div>
                     <label className="flex items-center cursor-pointer gap-2">
