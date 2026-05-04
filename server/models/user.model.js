@@ -69,7 +69,11 @@ const userSchema = mongoose.Schema({
     signUpWithGoogle:{
         type:Boolean,
         default:false
-    }
+    },
+    points: { type: Number, default: 0 },
+    referralCode: { type: String, sparse: true },
+    referredBy: { type: String, default: '' },
+    hasCompletedFirstOrder: { type: Boolean, default: false }
 },
     { timestamps: true }
 )

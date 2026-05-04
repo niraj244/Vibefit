@@ -25,6 +25,7 @@ import { OrderSuccess } from "./Pages/Orders/success";
 import { OrderFailed } from "./Pages/Orders/failed";
 import SearchPage from "./Pages/Search";
 import Compare from "./Pages/Compare";
+import Points from "./Pages/Points";
 
 
 const MyContext = createContext();
@@ -467,6 +468,7 @@ function App() {
             <Route path={"/address"} exact={true} element={<Address />} />
             <Route path={"/search"} exact={true} element={<SearchPage />} />
             <Route path={"/compare"} exact={true} element={<Compare />} />
+            <Route path={"/my-points"} exact={true} element={<Points />} />
           </Routes>
           <Footer />
         </MyContext.Provider>

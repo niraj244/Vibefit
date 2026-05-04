@@ -59,6 +59,18 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         default: 0
     },
+    pointsToRedeem: {
+        type: Number,
+        default: 0
+    },
+    pointsDiscount: {
+        type: Number,
+        default: 0
+    },
+    pointsAwarded: {
+        type: Boolean,
+        default: false
+    },
     pathaoConsignmentId: {
         type: String,
         default: ""

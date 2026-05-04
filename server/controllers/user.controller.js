@@ -18,11 +18,17 @@ cloudinary.config({
 });
 
 
+function generateReferralCode(name) {
+    const prefix = name.replace(/\s+/g, '').slice(0, 4).toUpperCase();
+    const suffix = Math.random().toString(36).substr(2, 5).toUpperCase();
+    return `${prefix}${suffix}`;
+}
+
 export async function registerUserController(request, response) {
     try {
         let user;
 
-        const { name, email, password } = request.body;
+        const { name, email, password, referredBy } = request.body;
         if (!name || !email || !password) {
             return response.status(400).json({
                 message: "provide email, name, password",
@@ -82,13 +88,16 @@ export async function registerUserController(request, response) {
         const salt = await bcryptjs.genSalt(10);
         const hashPassword = await bcryptjs.hash(password, salt);
 
+        const referralCode = generateReferralCode(name);
+
         user = new UserModel({
             email: email,
             password: hashPassword,
             name: name,
             otp: verifyCode,
             otpExpires: Date.now() + 600000,
-
+            referralCode,
+            referredBy: referredBy || '',
         });
 
         await user.save();
@@ -236,7 +245,8 @@ export async function authWithGoogle(request, response) {
                 avatar: avatar,
                 role: role,
                 verify_email: true,
-                signUpWithGoogle: true
+                signUpWithGoogle: true,
+                referralCode: generateReferralCode(name),
             });
 
             await user.save();

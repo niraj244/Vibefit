@@ -2,6 +2,7 @@ import OrderModel from "../models/order.model.js";
 import ProductModel from '../models/product.modal.js';
 import UserModel from '../models/user.model.js';
 import CouponModel from '../models/coupon.model.js';
+import PointsModel from '../models/points.model.js';
 import paypal from "@paypal/checkout-server-sdk";
 import OrderConfirmationEmail from "../utils/orderEmailTemplate.js";
 import sendEmailFun from "../config/sendEmail.js";
@@ -15,9 +16,61 @@ async function applyCoupon(code, userId) {
     );
 }
 
+async function redeemPoints(userId, pointsToRedeem, orderId) {
+    if (!pointsToRedeem || pointsToRedeem <= 0) return;
+    const user = await UserModel.findById(userId);
+    if (!user || user.points < pointsToRedeem) return;
+    await UserModel.findByIdAndUpdate(userId, { $inc: { points: -pointsToRedeem } });
+    await PointsModel.create({
+        userId: String(userId),
+        type: 'redeemed',
+        points: -pointsToRedeem,
+        orderId: String(orderId),
+        description: `Redeemed ${pointsToRedeem} points for Rs. ${(pointsToRedeem * 0.1).toFixed(0)} discount`
+    });
+}
+
+async function awardOrderPoints(userId, amountPaid, orderId) {
+    const points = Math.floor(amountPaid / 10);
+    if (points <= 0) return;
+    await UserModel.findByIdAndUpdate(userId, { $inc: { points } });
+    await PointsModel.create({
+        userId: String(userId),
+        type: 'earned',
+        points,
+        orderId: String(orderId),
+        description: `Earned from order worth Rs. ${Math.round(amountPaid)}`
+    });
+}
+
+async function handleFirstOrderReferral(userId, amountPaid) {
+    if (amountPaid < 50) return;
+    const user = await UserModel.findById(userId);
+    if (!user || user.hasCompletedFirstOrder || !user.referredBy) return;
+
+    await UserModel.findByIdAndUpdate(userId, { hasCompletedFirstOrder: true, $inc: { points: 250 } });
+    await PointsModel.create({
+        userId: String(userId),
+        type: 'referral_friend',
+        points: 250,
+        description: 'Referral bonus - first purchase reward'
+    });
+
+    const referrer = await UserModel.findOne({ referralCode: user.referredBy });
+    if (!referrer) return;
+
+    await UserModel.findByIdAndUpdate(referrer._id, { $inc: { points: 500 } });
+    await PointsModel.create({
+        userId: String(referrer._id),
+        type: 'referral_reward',
+        points: 500,
+        description: `Referral reward - ${user.name} made their first purchase`
+    });
+}
+
 export const createOrderController = async (request, response) => {
     try {
-        const { couponCode, couponDiscount } = request.body;
+        const { couponCode, couponDiscount, pointsToRedeem, pointsDiscount } = request.body;
 
         let order = new OrderModel({
             userId: request.body.userId,
@@ -29,6 +82,8 @@ export const createOrderController = async (request, response) => {
             date: request.body.date,
             couponCode: couponCode || '',
             couponDiscount: couponDiscount || 0,
+            pointsToRedeem: pointsToRedeem || 0,
+            pointsDiscount: pointsDiscount || 0,
         });
 
         if (!order) {
@@ -42,6 +97,7 @@ export const createOrderController = async (request, response) => {
 
         // Mark coupon as used only after order is saved
         await applyCoupon(couponCode, request.body.userId);
+        await redeemPoints(request.body.userId, pointsToRedeem, order._id);
 
         for (let i = 0; i < request.body.products.length; i++) {
 
@@ -388,14 +444,20 @@ export const updateOrderStatusController = async (request, response) => {
         const { id, order_status } = request.body;
 
         const updateOrder = await OrderModel.updateOne(
-            {
-                _id: id,
-            },
-            {
-                order_status: order_status,
-            },
+            { _id: id },
+            { order_status: order_status },
             { new: true }
-        )
+        );
+
+        // Award points only when delivered and not yet awarded
+        if (order_status === 'delivered') {
+            const order = await OrderModel.findOne({ _id: id, pointsAwarded: false });
+            if (order) {
+                await OrderModel.updateOne({ _id: id }, { pointsAwarded: true });
+                await awardOrderPoints(order.userId, order.totalAmt, order._id);
+                handleFirstOrderReferral(order.userId, order.totalAmt).catch(() => {});
+            }
+        }
 
         return response.json({
             message: "Update order status",
@@ -931,7 +993,7 @@ const esewaPendingOrders = new Map();
 // esewa payment
 export const initiateEsewaPaymentController = async (request, response) => {
     try {
-        const { userId, products, totalAmount, delivery_address, date, couponCode, couponDiscount } = request.body;
+        const { userId, products, totalAmount, delivery_address, date, couponCode, couponDiscount, pointsToRedeem, pointsDiscount } = request.body;
 
         if (!userId || !products || !totalAmount || !delivery_address) {
             return response.status(400).json({
@@ -978,6 +1040,8 @@ export const initiateEsewaPaymentController = async (request, response) => {
             totalAmount: amount,
             couponCode: couponCode || '',
             couponDiscount: couponDiscount || 0,
+            pointsToRedeem: pointsToRedeem || 0,
+            pointsDiscount: pointsDiscount || 0,
             createdAt: new Date()
         });
 
@@ -1073,7 +1137,7 @@ export const verifyEsewaPaymentController = async (request, response) => {
         // Check if payment was successful
         if (status === "COMPLETE" || status === "success" || transaction_code) {
             // Payment successful - create order
-            const { userId, products, delivery_address, date, totalAmount, couponCode, couponDiscount } = storedOrderData;
+            const { userId, products, delivery_address, date, totalAmount, couponCode, couponDiscount, pointsToRedeem, pointsDiscount } = storedOrderData;
 
             // Verify amount matches
             if (parseFloat(total_amount) !== parseFloat(totalAmount)) {
@@ -1094,12 +1158,15 @@ export const verifyEsewaPaymentController = async (request, response) => {
                 date: date,
                 couponCode: couponCode || '',
                 couponDiscount: couponDiscount || 0,
+                pointsToRedeem: pointsToRedeem || 0,
+                pointsDiscount: pointsDiscount || 0,
             });
 
             order = await order.save();
 
             // Mark coupon as used only after order is saved
             await applyCoupon(couponCode, userId);
+            await redeemPoints(userId, pointsToRedeem, order._id);
 
             // Update product stock
             for (let i = 0; i < products.length; i++) {

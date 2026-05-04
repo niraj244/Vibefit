@@ -23,6 +23,7 @@ import bannerList2Router from './route/bannerList2.route.js';
 import orderRouter from './route/order.route.js';
 import logoRouter from './route/logo.route.js';
 import couponRouter from './route/coupon.route.js';
+import pointsRouter from './route/points.route.js';
 
 const app = express();
 
@@ -93,6 +94,7 @@ app.use("/api/bannerList2",bannerList2Router)
 app.use("/api/order",orderRouter)
 app.use("/api/logo",logoRouter)
 app.use("/api/coupon",couponRouter)
+app.use("/api/points",pointsRouter)
 
 
 connectDB().then(() => {

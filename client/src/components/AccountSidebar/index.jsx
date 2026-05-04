@@ -10,6 +10,7 @@ import { MyContext } from "../../App";
 import CircularProgress from '@mui/material/CircularProgress';
 import { fetchDataFromApi, uploadImage } from "../../utils/api";
 import { LuMapPin } from "react-icons/lu";
+import { RiCoinLine } from "react-icons/ri";
 
 
 
@@ -171,6 +172,14 @@ const AccountSidebar = () => {
           <NavLink to="/my-orders" exact={true} activeClassName="isActive">
             <Button className="w-full  !py-2 !text-left !px-5 !justify-start !capitalize !text-[rgba(0,0,0,0.8)] !rounded-none flex items-center gap-2">
               <IoBagCheckOutline className="text-[17px]" /> My Orders
+            </Button>
+          </NavLink>
+        </li>
+
+        <li className="w-full">
+          <NavLink to="/my-points" exact={true} activeClassName="isActive">
+            <Button className="w-full  !py-2 !text-left !px-5 !justify-start !capitalize !text-[rgba(0,0,0,0.8)] !rounded-none flex items-center gap-2">
+              <RiCoinLine className="text-[17px]" /> Points & Referral
             </Button>
           </NavLink>
         </li>

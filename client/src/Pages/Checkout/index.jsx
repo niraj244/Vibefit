@@ -26,6 +26,8 @@ const Checkout = () => {
   const [couponData, setCouponData] = useState(null); // { code, type, value, discount, finalAmount }
   const [couponLoading, setCouponLoading] = useState(false);
   const [myCoupons, setMyCoupons] = useState([]);
+  const [userPoints, setUserPoints] = useState(0);
+  const [usePoints, setUsePoints] = useState(false);
   const context = useContext(MyContext);
 
   const history = useNavigate();
@@ -46,6 +48,10 @@ const Checkout = () => {
       fetchDataFromApi('/api/coupon/my-coupons').then((res) => {
         const data = res?.response?.data || res;
         setMyCoupons(data?.data || []);
+      });
+      fetchDataFromApi('/api/points/my-points').then((res) => {
+        const data = res?.response?.data || res;
+        if (data?.success) setUserPoints(data.data?.points || 0);
       });
     }
   }, [context?.userData, context.isLogin])
@@ -323,7 +329,10 @@ const Checkout = () => {
     }
   }
 
-  const finalAmount = couponData ? couponData.finalAmount : totalAmount;
+  const afterCoupon = couponData ? couponData.finalAmount : totalAmount;
+  const pointsUsable = usePoints ? Math.min(userPoints, Math.floor(afterCoupon * 10)) : 0;
+  const pointsDiscount = pointsUsable * 0.1;
+  const finalAmount = Math.max(0, afterCoupon - pointsDiscount);
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
@@ -402,6 +411,8 @@ const Checkout = () => {
       delivery_address: selectedAddress,
       couponCode: couponData?.code || '',
       couponDiscount: couponData?.discount || 0,
+      pointsToRedeem: pointsUsable,
+      pointsDiscount: pointsDiscount,
       date: new Date().toLocaleString("en-US", {
         month: "short",
         day: "2-digit",
@@ -467,6 +478,8 @@ const Checkout = () => {
         totalAmt: finalAmount,
         couponCode: couponData?.code || '',
         couponDiscount: couponData?.discount || 0,
+        pointsToRedeem: pointsUsable,
+        pointsDiscount: pointsDiscount,
         date: new Date().toLocaleString("en-US", {
           month: "short",
           day: "2-digit",
@@ -626,6 +639,12 @@ const Checkout = () => {
                     <span>− {formatPrice(couponData.discount)}</span>
                   </div>
                 )}
+                {usePoints && pointsUsable > 0 && (
+                  <div className="flex justify-between text-[13px] text-blue-600 font-[600] mb-1">
+                    <span>Points ({pointsUsable} pts)</span>
+                    <span>− {formatPrice(pointsDiscount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-[15px] font-[700] border-t border-[rgba(0,0,0,0.08)] pt-2 mt-1">
                   <span>Total</span>
                   <span className="text-[#FFA239]">{formatPrice(finalAmount)}</span>
@@ -723,6 +742,33 @@ const Checkout = () => {
                   </div>
                 )}
               </div>
+
+              {/* Points redemption section */}
+              {userPoints > 0 && (
+                <div className="mb-4 border border-[rgba(0,0,0,0.08)] rounded-md p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-[14px] font-[600]">Use Points</h3>
+                      <p className="text-[12px] text-[rgba(0,0,0,0.5)] mt-0.5">
+                        {userPoints.toLocaleString()} pts available = Rs. {(userPoints * 0.1).toFixed(0)} off
+                      </p>
+                    </div>
+                    <label className="flex items-center cursor-pointer gap-2">
+                      <div
+                        onClick={() => setUsePoints(!usePoints)}
+                        className={`w-11 h-6 rounded-full transition-colors relative ${usePoints ? 'bg-[#FFA239]' : 'bg-[rgba(0,0,0,0.15)]'}`}
+                      >
+                        <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${usePoints ? 'left-[22px]' : 'left-0.5'}`} />
+                      </div>
+                    </label>
+                  </div>
+                  {usePoints && pointsUsable > 0 && (
+                    <div className="mt-2 bg-blue-50 border border-blue-200 rounded-md p-2 text-[12px] text-blue-700 font-[600]">
+                      {pointsUsable.toLocaleString()} points will be used → Rs. {formatPrice(pointsDiscount)} discount
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="mb-4">
                 <h3 className="text-[16px] font-[600] mb-3">Select Payment Method</h3>

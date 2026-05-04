@@ -19,10 +19,13 @@ const Register = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isPasswordShow, setIsPasswordShow] = useState(false);
+
+  const refFromUrl = new URLSearchParams(window.location.search).get('ref') || '';
   const [formFields, setFormFields] = useState({
     name: "",
     email: "",
-    password: ""
+    password: "",
+    referredBy: refFromUrl,
   })
 
   const context = useContext(MyContext);
@@ -82,7 +85,7 @@ const Register = () => {
     })
   }
 
-  const valideValue = Object.values(formFields).every(el => el)
+  const valideValue = formFields.name && formFields.email && formFields.password
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -115,7 +118,8 @@ const Register = () => {
         setFormFields({
           name: "",
           email: "",
-          password: ""
+          password: "",
+          referredBy: "",
         })
 
         history("/verify")
@@ -225,6 +229,20 @@ const Register = () => {
                     <IoMdEyeOff className="text-[20px] opacity-75" />
                 }
               </Button>
+            </div>
+
+            <div className="form-group w-full mb-5">
+              <TextField
+                type="text"
+                id="referredBy"
+                name="referredBy"
+                label="Referral Code (optional)"
+                variant="outlined"
+                className="w-full"
+                value={formFields.referredBy}
+                disabled={isLoading}
+                onChange={onChangeInput}
+              />
             </div>
 
             <div className="flex items-center w-full mt-3 mb-3">
