@@ -7,12 +7,7 @@ import { FaRegHeart } from "react-icons/fa";
 import { IoGitCompareOutline } from "react-icons/io5";
 import { MdZoomOutMap } from "react-icons/md";
 import { MyContext } from "../../App";
-import { MdOutlineShoppingCart } from "react-icons/md";
-import { FaMinus } from "react-icons/fa6";
-import { FaPlus } from "react-icons/fa6";
-import { deleteData, editData, postData } from "../../utils/api";
-import CircularProgress from '@mui/material/CircularProgress';
-import { MdClose } from "react-icons/md";
+import { postData } from "../../utils/api";
 import { IoMdHeart } from "react-icons/io";
 import { formatPrice } from "../../utils/currency";
 
@@ -20,92 +15,19 @@ import { formatPrice } from "../../utils/currency";
 
 const ProductItem = (props) => {
 
-  const [quantity, setQuantity] = useState(1);
-  const [isAdded, setIsAdded] = useState(false);
   const [isAddedInMyList, setIsAddedInMyList] = useState(false);
   const [isInCompare, setIsInCompare] = useState(false);
-  const [cartItem, setCartItem] = useState([]);
-
-  const [activeTab, setActiveTab] = useState(null);
-  const [isShowTabs, setIsShowTabs] = useState(false);
-  const [selectedTabName, setSelectedTabName] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
 
 
   const context = useContext(MyContext);
 
-  const addToCart = (product, userId, quantity) => {
-
-    const productItem = {
-      _id: product?._id,
-      name: product?.name,
-      image: product?.images[0],
-      rating: product?.rating,
-      price: product?.price,
-      oldPrice: product?.oldPrice,
-      discount: product?.discount,
-      quantity: quantity,
-      subTotal: parseInt(product?.price * quantity),
-      productId: product?._id,
-      countInStock: product?.countInStock,
-      brand: product?.brand,
-      size: props?.item?.size?.length !== 0 ? selectedTabName : '',
-
-    }
-
-
-    setIsLoading(true);
-
-    if (props?.item?.size?.length !== 0) {
-      setIsShowTabs(true)
-    } else {
-      setIsAdded(true);
-
-      setIsShowTabs(false);
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
-      context?.addToCart(productItem, userId, quantity);
-
-    }
-
-
-
-    if (activeTab !== null) {
-      context?.addToCart(productItem, userId, quantity);
-      setIsAdded(true);
-      setIsShowTabs(false)
-      setTimeout(() => {
-        setIsLoading(false);
-      }, 500);
-    }
-
-
-  }
-
-
-  const handleClickActiveTab = (index, name) => {
-    setActiveTab(index)
-    setSelectedTabName(name)
-  }
+  // Cards no longer add to cart: clicking the picture or name opens the product page,
+  // which is the single place to pick a size and add to cart.
 
   useEffect(() => {
-    const item = context?.cartData?.filter((cartItem) =>
-      cartItem.productId.includes(props?.item?._id)
-    )
-
     const myListItem = context?.myListData?.filter((item) =>
       item.productId.includes(props?.item?._id)
     )
-
-    if (item?.length !== 0) {
-      setCartItem(item)
-      setIsAdded(true);
-      setQuantity(item[0]?.quantity)
-    } else {
-      setQuantity(1)
-    }
-
 
     if (myListItem?.length !== 0) {
       setIsAddedInMyList(true);
@@ -113,64 +35,12 @@ const ProductItem = (props) => {
       setIsAddedInMyList(false)
     }
 
-  }, [context?.cartData]);
+  }, [context?.myListData]);
 
   useEffect(() => {
     const isInCompareList = context?.compareData?.some(item => item._id === props?.item?._id);
     setIsInCompare(isInCompareList || false);
   }, [context?.compareData, props?.item?._id]);
-
-
-  const minusQty = () => {
-    if (quantity !== 1 && quantity > 1) {
-      setQuantity(quantity - 1)
-    } else {
-      setQuantity(1)
-    }
-
-
-    if (quantity === 1) {
-      deleteData(`/api/cart/delete-cart-item/${cartItem[0]?._id}`).then((res) => {
-        setIsAdded(false);
-        context.alertBox("success", "Item Removed ");
-        context?.getCartItems();
-        setIsShowTabs(false);
-        setActiveTab(null);
-      })
-    } else {
-      const obj = {
-        _id: cartItem[0]?._id,
-        qty: quantity - 1,
-        subTotal: props?.item?.price * (quantity - 1)
-      }
-
-      editData(`/api/cart/update-qty`, obj).then((res) => {
-        context.alertBox("success", res?.data?.message);
-        context?.getCartItems();
-      })
-    }
-
-  }
-
-
-  const addQty = () => {
-
-    setQuantity(quantity + 1);
-
-    const obj = {
-      _id: cartItem[0]?._id,
-      qty: quantity + 1,
-      subTotal: props?.item?.price * (quantity + 1)
-    }
-
-    editData(`/api/cart/update-qty`, obj).then((res) => {
-      context.alertBox("success", res?.data?.message);
-      context?.getCartItems();
-    })
-
-
-
-  }
 
 
   const handleAddToMyList = (item) => {
@@ -230,32 +100,6 @@ const ProductItem = (props) => {
         </Link>
 
 
-
-        {
-          isShowTabs === true &&
-          <div className="flex items-center justify-center absolute top-0 left-0 w-full h-full 
-      bg-[rgba(0,0,0,0.7)] z-[60] p-3 gap-2">
-
-            <Button className="!absolute top-[10px] right-[10px] !min-w-[30px] !min-h-[30px] !w-[30px] !h-[30px] !rounded-full !bg-[rgba(255,255,255,1)] text-black"
-              onClick={() => setIsShowTabs(false)}
-            > <MdClose className=" text-black z-[90] text-[25px]" /></Button>
-
-            {
-              props?.item?.size?.length !== 0 && props?.item?.size?.map((item, index) => {
-                return (
-                  <span key={index} className={`flex items-center justify-center p-1 px-2 bg-[rgba(255,555,255,0.8)] max-w-[35px] h-[25px]  
-          rounded-sm cursor-pointer hover:bg-white 
-          ${activeTab === index && '!bg-primary text-white'}`}
-                    onClick={() => handleClickActiveTab(index, item)}
-                  >{item}
-                  </span>)
-              })
-            }
-
-          </div>
-        }
-
-
         {props?.item?.discount > 0 && (
           <span className="discount flex items-center absolute top-[10px] left-[10px] z-50 bg-primary text-white rounded-lg p-1 text-[12px] font-[500]">
             {props?.item?.discount}%
@@ -294,7 +138,7 @@ const ProductItem = (props) => {
         </div>
       </div>
 
-      <div className="info p-3 py-5 relative pb-[50px] h-[190px]">
+      <div className="info p-3 py-5 relative h-[150px]">
         <h6 className="text-[13px] !font-[400]">
           <span className="link transition-all">
             {props?.item?.brand}
@@ -324,46 +168,6 @@ const ProductItem = (props) => {
             </span>
           )}
         </div>
-
-
-        <div className="!absolute bottom-[15px] left-0 pl-3 pr-3 w-full">
-
-          {
-            isAdded === false ?
-
-              <Button className="btn-org addToCartBtn btn-border flex w-full btn-sm gap-2 " size="small"
-                onClick={() => addToCart(props?.item, context?.userData?._id, quantity)}>
-                <MdOutlineShoppingCart className="text-[18px]" /> Add to Cart
-              </Button>
-
-              :
-
-              <>
-                {
-                  isLoading === true ?
-                    <Button className="addtocart btn-org btn-border flex w-full btn-sm gap-2 " size="small">
-                      <CircularProgress />
-                    </Button>
-
-                    :
-
-
-                    <div className="flex items-center justify-between overflow-hidden rounded-full border border-[rgba(0,0,0,0.1)]">
-                      <Button className="!min-w-[35px] !w-[35px] !h-[30px] !bg-[#f1f1f1]  !rounded-none" onClick={minusQty}><FaMinus className="text-[rgba(0,0,0,0.7)]" /></Button>
-                      <span>{quantity}</span>
-                      <Button className="!min-w-[35px] !w-[35px] !h-[30px] !bg-gray-800 !rounded-none"
-                        onClick={addQty}>
-                        <FaPlus className="text-white" /></Button>
-                    </div>
-
-                }
-              </>
-
-          }
-
-        </div>
-
-
 
       </div>
     </div>

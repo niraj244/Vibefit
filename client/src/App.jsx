@@ -108,17 +108,13 @@ function App() {
   const getUserDetails = () => {
     fetchDataFromApi(`/api/user/user-details`).then((res) => {
       setUserData(res.data);
-      if (res?.response?.data?.error === true) {
-        if (res?.response?.data?.message === "You have not login") {
-          localStorage.removeItem("accessToken");
-          localStorage.removeItem("refreshToken");
-          alertBox("error", "Your session is closed please login again");
-
-
-          // maybe redirect to login later
-
-          setIsLogin(false);
-        }
+      // 401 = token missing, expired or invalid → log out. (The message check keeps working
+      // with an older server that still answers 500.)
+      if (res?.response?.status === 401 || res?.response?.data?.message === "You have not login") {
+        localStorage.removeItem("accessToken");
+        localStorage.removeItem("refreshToken");
+        alertBox("error", "Your session is closed please login again");
+        setIsLogin(false);
       }
     })
   }
@@ -196,7 +192,7 @@ function App() {
       });
 
       alertBox("success", "Added to cart");
-      return;
+      return Promise.resolve({ error: false });
     }
 
     const data = {
@@ -214,13 +210,15 @@ function App() {
       size: product?.size,
     };
 
-    postData("/api/cart/add", data).then((res) => {
+    // returned so callers (e.g. the product page) can react once the server answers
+    return postData("/api/cart/add", data).then((res) => {
       if (res?.error === false) {
         alertBox("success", res?.message);
         getCartItems();
       } else {
         alertBox("error", res?.message);
       }
+      return res;
     });
   };
 

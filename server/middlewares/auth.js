@@ -25,7 +25,10 @@ const auth = async(request,response,next)=>{
         next()
 
     } catch (error) {
-        return response.status(500).json({
+        // jwt.verify throws when the token is expired, malformed or signed with another key.
+        // That is "not logged in" (401), not a server crash (500). The message is kept the same
+        // so older deployed frontends that still match on it keep working.
+        return response.status(401).json({
             message : "You have not login",
             error : true,
             success : false

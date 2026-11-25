@@ -492,7 +492,8 @@ function App() {
 
       fetchDataFromApi(`/api/user/user-details`).then((res) => {
         setUserData(res.data);
-        if (res?.response?.data?.message === "You have not login") {
+        // 401 = token missing, expired or invalid → log out (message check kept for an older server)
+        if (res?.response?.status === 401 || res?.response?.data?.message === "You have not login") {
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
           setIsLogin(false);

@@ -71,80 +71,37 @@ export const ProductDetailsComponent = (props) => {
     setIsInCompare(isInCompareList || false);
   }, [context?.compareData, props?.item?._id])
 
+  // The ONE add-to-cart path: uses the shared context.addToCart from App.jsx, which handles
+  // guests (cart saved in the browser, merged after login) and logged-in users (saved on the server).
   const addToCart = (product, userId, quantity) => {
+    const hasSizes = props?.item?.size?.length !== 0;
 
-
-    if (userId === undefined) {
-      context?.alertBox("error", "you are not login please login first");
-      return false;
+    if (hasSizes && selectedTabName === null) {
+      setTabError(true);
+      return;
     }
 
     const productItem = {
       _id: product?._id,
-      productTitle: product?.name,
+      name: product?.name,
       image: product?.images[0],
       rating: product?.rating,
       price: product?.price,
       oldPrice: product?.oldPrice,
       discount: product?.discount,
-      quantity: quantity,
-      subTotal: parseInt(product?.price * quantity),
       productId: product?._id,
       countInStock: product?.countInStock,
       brand: product?.brand,
-      size: props?.item?.size?.length !== 0 ? selectedTabName : '',
-
+      size: hasSizes ? selectedTabName : '',
     }
 
-
-
-    if (props?.item?.size?.length !== 0) {
-      if (selectedTabName !== null) {
-        setIsLoading(true);
-
-        postData("/api/cart/add", productItem).then((res) => {
-          if (res?.error === false) {
-            context?.alertBox("success", res?.message);
-
-            context?.getCartItems();
-            setTimeout(() => {
-              setIsLoading(false);
-              setIsAdded(true)
-            }, 500);
-
-          } else {
-            context?.alertBox("error", res?.message);
-            setTimeout(() => {
-              setIsLoading(false);
-            }, 500);
-          }
-
-        })
-
-      } else {
-        setTabError(true);
-      }
-    } else {
-      setIsLoading(true);
-      postData("/api/cart/add", productItem).then((res) => {
-        if (res?.error === false) {
-          context?.alertBox("success", res?.message);
-
-          context?.getCartItems();
-          setTimeout(() => {
-            setIsLoading(false);
-            setIsAdded(true)
-          }, 500);
-
-        } else {
-          context?.alertBox("error", res?.message);
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 500);
-        }
-
-      })
-    }
+    setIsLoading(true);
+    Promise.resolve(context?.addToCart(productItem, userId, quantity)).then((res) => {
+      setTimeout(() => {
+        setIsLoading(false);
+        if (res?.error === false) setIsAdded(true);
+      }, 500);
+    });
   }
 
 
